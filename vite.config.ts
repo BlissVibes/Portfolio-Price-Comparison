@@ -4,6 +4,8 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
+  // Use repo name as base path when deploying to GitHub Pages
+  base: process.env.GITHUB_PAGES ? '/Portfolio-Price-Comparison/' : '/',
   plugins: [
     react(),
     VitePWA({

@@ -1,0 +1,98 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main, master]
+
+permissions:
+  contents: write   # needed to commit the version bump back
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  bump-and-build:
+    runs-on: ubuntu-latest
+    outputs:
+      new_version: ${{ steps.bump.outputs.new_version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Bump patch version
+        id: bump
+        run: |
+          # Read current version from package.json
+          CURRENT=$(node -p "require('./package.json').version")
+
+          # Increment patch (x.y.z -> x.y.z+1)
+          IFS='.' read -r major minor patch <<< "$CURRENT"
+          NEW_VERSION="$major.$minor.$((patch + 1))"
+          echo "new_version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+
+          # Update package.json
+          npm version "$NEW_VERSION" --no-git-tag-version
+
+          # Append new section to CHANGELOG.md
+          DATE=$(date +%Y-%m-%d)
+          TEMP=$(mktemp)
+
+          # Insert after the [Unreleased] section header
+          awk -v ver="$NEW_VERSION" -v date="$DATE" '
+            /^## \[Unreleased\]/ {
+              print
+              print ""
+              print "---"
+              print ""
+              print "## [" ver "] - " date
+              print ""
+              print "### Changed"
+              print "- Deployed version " ver
+              next
+            }
+            { print }
+          ' CHANGELOG.md > "$TEMP" && mv "$TEMP" CHANGELOG.md
+
+          echo "Bumped $CURRENT -> $NEW_VERSION"
+
+      - name: Commit version bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json CHANGELOG.md
+          git commit -m "chore: bump version to ${{ steps.bump.outputs.new_version }} [skip ci]"
+          git push
+
+      - name: Build
+        run: npm run build
+        env:
+          GITHUB_PAGES: true
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: bump-and-build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

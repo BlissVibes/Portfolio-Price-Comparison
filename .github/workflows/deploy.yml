@@ -39,10 +39,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Bump version
+      # ── Version bump + release ── only when triggered via workflow_dispatch
+      - name: Bump version and tag release
+        if: github.event_name == 'workflow_dispatch'
         id: bump
         run: |
-          BUMP_TYPE="${{ github.event.inputs.version_bump || 'patch' }}"
+          BUMP_TYPE="${{ github.event.inputs.version_bump }}"
           CURRENT=$(node -p "require('./package.json').version")
           IFS='.' read -r major minor patch <<< "$CURRENT"
 
@@ -67,23 +69,25 @@ jobs:
               print "## [" ver "] - " date
               print ""
               print "### Changed"
-              print "- Deployed version " ver
+              print "- Released version " ver
               next
             }
             { print }
           ' CHANGELOG.md > "$TEMP" && mv "$TEMP" CHANGELOG.md
 
-          echo "Bumped $CURRENT -> $NEW_VERSION"
-
-      - name: Commit version bump and push tag
-        run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add package.json package-lock.json CHANGELOG.md
-          git commit -m "chore: bump version to ${{ steps.bump.outputs.new_version }} [skip ci]"
-          git tag "v${{ steps.bump.outputs.new_version }}"
+          git commit -m "chore: bump version to $NEW_VERSION [skip ci]"
+          git tag "v$NEW_VERSION"
           git push
-          git push origin "v${{ steps.bump.outputs.new_version }}"
+          git push origin "v$NEW_VERSION"
+
+      # ── For plain pushes, just read the current version for the deploy label
+      - name: Read current version
+        if: github.event_name != 'workflow_dispatch'
+        id: current_ver
+        run: echo "new_version=$(node -p \"require('./package.json').version\")" >> "$GITHUB_OUTPUT"
 
       - name: Build
         run: npm run build
@@ -91,6 +95,7 @@ jobs:
           GITHUB_PAGES: true
 
       - name: Create GitHub Release
+        if: github.event_name == 'workflow_dispatch'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -107,4 +112,4 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist
-          commit_message: "deploy: v${{ steps.bump.outputs.new_version }}"
+          commit_message: "deploy: v${{ steps.bump.outputs.new_version || steps.current_ver.outputs.new_version }}"

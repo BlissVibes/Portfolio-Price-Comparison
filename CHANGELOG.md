@@ -10,6 +10,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
 
+## [1.2.3] - 2026-02-24
+
+### Fixed
+- Mobile table no longer stretches far too wide — removed `white-space: nowrap` on table cells that was preventing text from wrapping
+
+---
+
 ## [1.2.2] - 2026-02-24
 
 ### Fixed

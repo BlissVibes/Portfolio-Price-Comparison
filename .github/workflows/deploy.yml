@@ -3,9 +3,20 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main, master]
+  workflow_dispatch:
+    inputs:
+      version_bump:
+        description: 'Version bump type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
 
 permissions:
-  contents: write  # needed to push version bump + gh-pages branch
+  contents: write  # push version bump commit, git tags, gh-pages branch, create releases
 
 concurrency:
   group: pages
@@ -28,12 +39,21 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Bump patch version
+      # ── Version bump + release ── only when triggered via workflow_dispatch
+      - name: Bump version and tag release
+        if: github.event_name == 'workflow_dispatch'
         id: bump
         run: |
+          BUMP_TYPE="${{ github.event.inputs.version_bump }}"
           CURRENT=$(node -p "require('./package.json').version")
           IFS='.' read -r major minor patch <<< "$CURRENT"
-          NEW_VERSION="$major.$minor.$((patch + 1))"
+
+          case "$BUMP_TYPE" in
+            major) NEW_VERSION="$((major + 1)).0.0" ;;
+            minor) NEW_VERSION="$major.$((minor + 1)).0" ;;
+            patch) NEW_VERSION="$major.$minor.$((patch + 1))" ;;
+          esac
+
           echo "new_version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
 
           npm version "$NEW_VERSION" --no-git-tag-version
@@ -49,32 +69,47 @@ jobs:
               print "## [" ver "] - " date
               print ""
               print "### Changed"
-              print "- Deployed version " ver
+              print "- Released version " ver
               next
             }
             { print }
           ' CHANGELOG.md > "$TEMP" && mv "$TEMP" CHANGELOG.md
 
-          echo "Bumped $CURRENT -> $NEW_VERSION"
-
-      - name: Commit version bump
-        run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add package.json package-lock.json CHANGELOG.md
-          git commit -m "chore: bump version to ${{ steps.bump.outputs.new_version }} [skip ci]"
+          git commit -m "chore: bump version to $NEW_VERSION [skip ci]"
+          git tag "v$NEW_VERSION"
           git push
+          git push origin "v$NEW_VERSION"
+
+      # ── For plain pushes, just read the current version for the deploy label
+      - name: Read current version
+        if: github.event_name != 'workflow_dispatch'
+        id: current_ver
+        run: echo "new_version=$(node -p \"require('./package.json').version\")" >> "$GITHUB_OUTPUT"
 
       - name: Build
         run: npm run build
         env:
           GITHUB_PAGES: true
 
-      # Pushes dist/ to the gh-pages branch — no special GitHub settings needed.
+      - name: Create GitHub Release
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.bump.outputs.new_version }}"
+          NOTES=$(awk "/^## \[$VERSION\]/{found=1; next} found && /^## \[/{exit} found && NF{print}" CHANGELOG.md)
+          gh release create "v$VERSION" \
+            --title "v$VERSION" \
+            --notes "${NOTES:-Released version $VERSION}" \
+            --latest
+
       # In repo Settings → Pages, set source: "Deploy from a branch" → gh-pages / root
       - name: Deploy to gh-pages branch
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist
-          commit_message: "deploy: v${{ steps.bump.outputs.new_version }}"
+          commit_message: "deploy: v${{ steps.bump.outputs.new_version || steps.current_ver.outputs.new_version }}"

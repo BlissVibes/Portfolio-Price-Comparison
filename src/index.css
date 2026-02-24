@@ -365,6 +365,64 @@ body { min-height: 100vh; }
   text-align: right;
 }
 
+/* ===== Vendor Mode ===== */
+.vendor-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.vendor-mode-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.vendor-mode-btn:hover {
+  border-color: #9333ea;
+  color: var(--text);
+}
+
+.vendor-mode-btn--active {
+  background: rgba(147, 51, 234, 0.15);
+  border-color: #9333ea;
+  color: #c084fc;
+}
+
+.vendor-color-picker {
+  width: 32px;
+  height: 32px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.row--vendor-clickable { cursor: pointer; }
+
+.row--removed { background: rgba(255, 140, 0, 0.12); }
+
+.vendor-footer { color: var(--text-muted); font-size: 0.8rem; }
+
+.vendor-clear-btn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 0;
+}
+
+.vendor-clear-btn:hover { text-decoration: underline; }
+
 /* ===== Responsive ===== */
 @media (max-width: 600px) {
   .app-title { font-size: 1.5rem; }

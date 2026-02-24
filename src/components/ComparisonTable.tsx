@@ -10,12 +10,22 @@ type SortKey = 'productName' | 'set' | 'category' | 'priceChange' | 'priceChange
 type SortDir = 'asc' | 'desc';
 type FilterMode = 'all' | 'gained' | 'lost' | 'new' | 'removed';
 
+const VENDOR_DEFAULT_COLOR = '#9333ea';
+
 function fmt(n: number) {
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 }
 
 function pct(n: number) {
   return (n >= 0 ? '+' : '') + n.toFixed(1) + '%';
+}
+
+/** Convert a hex color to a low-opacity rgba background tint. */
+function vendorBg(hex: string) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, 0.22)`;
 }
 
 export default function ComparisonTable({ comparisons, portfolios }: Props) {
@@ -26,6 +36,9 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
   const [filter, setFilter] = useState<FilterMode>('all');
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [vendorMode, setVendorMode] = useState(false);
+  const [vendorColor, setVendorColor] = useState(VENDOR_DEFAULT_COLOR);
+  const [markedCards, setMarkedCards] = useState<Map<string, string>>(new Map());
 
   const categories = useMemo(() => {
     const cats = new Set(comparisons.map((c) => c.category));
@@ -90,6 +103,19 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
     return <span className="sort-icon">{sort.dir === 'asc' ? '↑' : '↓'}</span>;
   }
 
+  function handleRowClick(cardKey: string) {
+    if (!vendorMode) return;
+    setMarkedCards((prev) => {
+      const next = new Map(prev);
+      if (next.has(cardKey)) {
+        next.delete(cardKey);
+      } else {
+        next.set(cardKey, vendorColor);
+      }
+      return next;
+    });
+  }
+
   // Sorted portfolios by date for column headers
   const sortedPortfolios = [...portfolios].sort((a, b) =>
     a.marketPriceDate.localeCompare(b.marketPriceDate)
@@ -138,6 +164,25 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
             ))}
           </div>
         )}
+
+        <div className="vendor-controls">
+          <button
+            className={`vendor-mode-btn ${vendorMode ? 'vendor-mode-btn--active' : ''}`}
+            onClick={() => setVendorMode((v) => !v)}
+            title={vendorMode ? 'Exit Vendor Mode' : 'Vendor Mode — click rows to mark as dealt with'}
+          >
+            {vendorMode ? '✓ Vendor Mode' : 'Vendor Mode'}
+          </button>
+          {vendorMode && (
+            <input
+              type="color"
+              className="vendor-color-picker"
+              value={vendorColor}
+              onChange={(e) => setVendorColor(e.target.value)}
+              title="Mark color"
+            />
+          )}
+        </div>
       </div>
 
       <div className="table-wrapper">
@@ -183,6 +228,12 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
               </tr>
             )}
             {filtered.map((card) => {
+              const isRemoved =
+                card.snapshots.length === 1 &&
+                card.snapshots[0].portfolioId !== latestPortfolioId;
+
+              const markedColor = markedCards.get(card.key);
+
               const changeClass =
                 card.priceChange === null
                   ? ''
@@ -192,8 +243,25 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
                   ? 'row--loss'
                   : '';
 
+              const rowClass = [
+                markedColor ? '' : isRemoved ? 'row--removed' : changeClass,
+                vendorMode ? 'row--vendor-clickable' : '',
+              ].filter(Boolean).join(' ');
+
+              const rowStyle = markedColor
+                ? {
+                    backgroundColor: vendorBg(markedColor),
+                    boxShadow: `inset 3px 0 0 ${markedColor}`,
+                  }
+                : undefined;
+
               return (
-                <tr key={card.key} className={changeClass}>
+                <tr
+                  key={card.key}
+                  className={rowClass}
+                  style={rowStyle}
+                  onClick={() => handleRowClick(card.key)}
+                >
                   <td>{card.category}</td>
                   <td>{card.set}</td>
                   <td className="td-name">
@@ -241,6 +309,15 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
         </table>
       </div>
       <div className="table-footer">
+        {vendorMode && markedCards.size > 0 && (
+          <span className="vendor-footer">
+            {markedCards.size} marked ·{' '}
+            <button className="vendor-clear-btn" onClick={() => setMarkedCards(new Map())}>
+              clear all
+            </button>
+            {' · '}
+          </span>
+        )}
         Showing {filtered.length} of {comparisons.length} cards
       </div>
     </section>

@@ -34,6 +34,15 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
 
   const multipleSnapshots = portfolios.length >= 2;
 
+  // Determine the latest portfolio by date (not upload order)
+  const latestPortfolioId = useMemo(() => {
+    if (portfolios.length === 0) return '';
+    const sorted = [...portfolios].sort((a, b) =>
+      a.marketPriceDate.localeCompare(b.marketPriceDate)
+    );
+    return sorted[sorted.length - 1].id;
+  }, [portfolios]);
+
   const filtered = useMemo(() => {
     let result = comparisons;
 
@@ -54,8 +63,8 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
     if (multipleSnapshots) {
       if (filter === 'gained') result = result.filter((c) => (c.priceChange ?? 0) > 0);
       if (filter === 'lost') result = result.filter((c) => (c.priceChange ?? 0) < 0);
-      if (filter === 'new') result = result.filter((c) => c.snapshots.length === 1 && c.snapshots[0].portfolioId === portfolios[portfolios.length - 1].id);
-      if (filter === 'removed') result = result.filter((c) => c.snapshots.length === 1 && c.snapshots[0].portfolioId !== portfolios[portfolios.length - 1].id);
+      if (filter === 'new') result = result.filter((c) => c.snapshots.length === 1 && c.snapshots[0].portfolioId === latestPortfolioId);
+      if (filter === 'removed') result = result.filter((c) => c.snapshots.length === 1 && c.snapshots[0].portfolioId !== latestPortfolioId);
     }
 
     return [...result].sort((a, b) => {
@@ -68,7 +77,7 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
       if (av > bv) return sort.dir === 'asc' ? 1 : -1;
       return 0;
     });
-  }, [comparisons, search, categoryFilter, filter, sort, portfolios, multipleSnapshots]);
+  }, [comparisons, search, categoryFilter, filter, sort, latestPortfolioId, multipleSnapshots]);
 
   function toggleSort(key: SortKey) {
     setSort((prev) =>

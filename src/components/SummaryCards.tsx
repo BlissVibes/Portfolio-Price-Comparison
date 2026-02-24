@@ -9,6 +9,11 @@ function fmt(n: number) {
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 }
 
+/** Strip file extension from filename (e.g., "for sale.csv" → "for sale"). */
+function stripFileExtension(filename: string): string {
+  return filename.replace(/\.[^/.]+$/, '');
+}
+
 export default function SummaryCards({ summaries, onRemove }: Props) {
   if (summaries.length === 0) return null;
 
@@ -25,7 +30,7 @@ export default function SummaryCards({ summaries, onRemove }: Props) {
             >
               ✕
             </button>
-            <div className="summary-card__filename">{s.filename}</div>
+            <div className="summary-card__filename">{stripFileExtension(s.filename)}</div>
             {s.marketPriceDate && (
               <div className="summary-card__date">Market prices as of {s.marketPriceDate}</div>
             )}

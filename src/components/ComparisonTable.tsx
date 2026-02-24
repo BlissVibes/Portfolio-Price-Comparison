@@ -80,6 +80,11 @@ function isSealedProduct(productName: string): boolean {
   return SEALED_PATTERNS.some((re) => re.test(productName));
 }
 
+/** Strip file extension from filename (e.g., "for sale.csv" → "for sale"). */
+function stripFileExtension(filename: string): string {
+  return filename.replace(/\.[^/.]+$/, '');
+}
+
 export default function ComparisonTable({ comparisons, portfolios }: Props) {
   const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({
     key: 'priceChange',
@@ -357,7 +362,7 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
               {sortedPortfolios.map((p) =>
                 show(p.id) ? (
                   <th key={p.id} className="th-price">
-                    <span className="th-price__file">{p.filename}</span>
+                    <span className="th-price__file">{stripFileExtension(p.filename)}</span>
                     {p.marketPriceDate && (
                       <span className="th-price__date">{p.marketPriceDate}</span>
                     )}
@@ -424,7 +429,7 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
                   <td className="td-name">
                     {card.productName}
                     {mobileView && card.cardNumber && (
-                      <span className="td-card-num"> — {card.cardNumber}</span>
+                      <span className="td-card-num"> - {card.cardNumber}</span>
                     )}
                     {sealed && <span className="badge badge--sealed">Sealed</span>}
                   </td>

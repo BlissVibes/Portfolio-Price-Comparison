@@ -10,6 +10,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
 
+## [1.2.4] - 2026-02-24
+
+### Changed
+- Portfolio filenames no longer include file extension (e.g., "for sale.csv" displays as "for sale" in both table headers and summary cards)
+- Mobile view card number separator changed from em dash to regular dash (e.g., "Charizard - 11/102")
+
+---
+
 ## [1.2.3] - 2026-02-24
 
 ### Fixed

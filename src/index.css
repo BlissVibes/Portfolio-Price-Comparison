@@ -547,8 +547,4 @@ body { min-height: 100vh; }
 
   /* Enable touch-friendly horizontal scroll on the table */
   .table-wrapper { -webkit-overflow-scrolling: touch; }
-
-  /* Prevent cell text from collapsing to zero width so the table stays scrollable */
-  .comparison-table td,
-  .comparison-table th { white-space: nowrap; }
 }

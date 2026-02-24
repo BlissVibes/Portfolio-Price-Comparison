@@ -4,7 +4,7 @@ import FileDropZone from './components/FileDropZone';
 import SummaryCards from './components/SummaryCards';
 import ComparisonTable from './components/ComparisonTable';
 import type { PortfolioFile } from './types';
-import { parseCollectrCSV } from './csvParser';
+import { parsePortfolioFile } from './csvParser';
 import { buildComparisons, buildSummaries } from './comparison';
 
 export default function App() {
@@ -23,12 +23,12 @@ export default function App() {
             const reader = new FileReader();
             reader.onload = (e) => {
               const content = e.target?.result as string;
-              const parsed = parseCollectrCSV(content, file.name);
-              if (!parsed) {
-                newErrors.push(`Failed to parse ${file.name}`);
+              const { result, error } = parsePortfolioFile(content, file.name);
+              if (!result) {
+                newErrors.push(error ?? `Failed to parse ${file.name}`);
                 resolve(null);
               } else {
-                resolve(parsed);
+                resolve(result);
               }
             };
             reader.onerror = () => {
@@ -45,7 +45,6 @@ export default function App() {
         const existing = new Set(prev.map((p) => p.filename));
         const toAdd = valid.filter((v) => !existing.has(v.filename));
 
-        // Check for portfolio name mismatches
         if (!ignoreDifferentNames && prev.length > 0 && toAdd.length > 0) {
           const existingName = prev[0].portfolioName;
           const mismatched = toAdd.filter(
@@ -56,7 +55,6 @@ export default function App() {
               ...w,
               `Portfolio name mismatch: existing files use "${existingName}" but ${mismatched.map((m) => m.filename).join(', ')} uses "${mismatched[0].portfolioName}". Enable "Ignore different portfolio names" to allow this.`,
             ]);
-            // Filter out mismatched portfolios
             const matching = toAdd.filter(
               (p) => !p.portfolioName || !existingName || p.portfolioName === existingName
             );
@@ -69,6 +67,16 @@ export default function App() {
       if (newErrors.length) setErrors((prev) => [...prev, ...newErrors]);
     });
   }, [ignoreDifferentNames]);
+
+  const handleText = useCallback((content: string) => {
+    const label = `Pasted Export (${new Date().toLocaleTimeString()})`;
+    const { result, error } = parsePortfolioFile(content, label);
+    if (!result) {
+      setErrors((prev) => [...prev, error ?? 'Failed to parse pasted content']);
+      return;
+    }
+    setPortfolios((prev) => [...prev, result]);
+  }, []);
 
   function removePortfolio(id: string) {
     setPortfolios((prev) => prev.filter((p) => p.id !== id));
@@ -86,11 +94,11 @@ export default function App() {
       <header className="app-header">
         <h1 className="app-title">Portfolio Price Comparison</h1>
         <p className="app-byline">by BlissTCG <span className="app-version">v{version}</span></p>
-        <p className="app-subtitle">Import Collectr CSV exports to track and compare card prices over time</p>
+        <p className="app-subtitle">Import TCGPlayer or Collectr exports to track and compare card prices over time</p>
       </header>
 
       <main className="app-main">
-        <FileDropZone onFiles={handleFiles} />
+        <FileDropZone onFiles={handleFiles} onText={handleText} />
 
         <label className="ignore-names-toggle">
           <input

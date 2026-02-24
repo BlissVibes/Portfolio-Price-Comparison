@@ -16,7 +16,9 @@ on:
           - major
 
 permissions:
-  contents: write  # push version bump commit, git tags, gh-pages branch, create releases
+  contents: write  # push version bump commit, git tags, create releases
+  pages: write     # deploy to GitHub Pages
+  id-token: write  # required by actions/deploy-pages
 
 concurrency:
   group: pages
@@ -25,6 +27,9 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -83,11 +88,24 @@ jobs:
           git push
           git push origin "v$NEW_VERSION"
 
-      # ── For plain pushes, just read the current version for the deploy label
-      - name: Read current version
+      # ── For plain pushes, read version and tag it if not already tagged
+      - name: Read current version and tag release
         if: github.event_name != 'workflow_dispatch'
         id: current_ver
-        run: echo "new_version=$(node -p \"require('./package.json').version\")" >> "$GITHUB_OUTPUT"
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "new_version=$VERSION" >> "$GITHUB_OUTPUT"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          if ! git tag | grep -q "^v${VERSION}$"; then
+            git tag "v$VERSION"
+            git push origin "v$VERSION"
+            echo "tagged=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "tagged=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Build
         run: npm run build
@@ -106,10 +124,25 @@ jobs:
             --notes "${NOTES:-Released version $VERSION}" \
             --latest
 
-      # In repo Settings → Pages, set source: "Deploy from a branch" → gh-pages / root
-      - name: Deploy to gh-pages branch
-        uses: peaceiris/actions-gh-pages@v4
+      - name: Create GitHub Release for push-triggered deploys
+        if: github.event_name != 'workflow_dispatch' && steps.current_ver.outputs.tagged == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.current_ver.outputs.new_version }}"
+          NOTES=$(awk "/^## \[$VERSION\]/{found=1; next} found && /^## \[/{exit} found && NF{print}" CHANGELOG.md)
+          gh release create "v$VERSION" \
+            --title "v$VERSION" \
+            --notes "${NOTES:-Released version $VERSION}" \
+            --latest
+
+      # Deploy directly via GitHub Actions — no separate gh-pages branch needed.
+      # In repo Settings → Pages, set Source to "GitHub Actions".
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist
-          commit_message: "deploy: v${{ steps.bump.outputs.new_version || steps.current_ver.outputs.new_version }}"
+          path: ./dist
+
+      - uses: actions/deploy-pages@v4
+        id: deploy

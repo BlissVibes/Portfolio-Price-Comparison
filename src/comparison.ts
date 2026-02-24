@@ -41,11 +41,18 @@ export function buildComparisons(portfolios: PortfolioFile[]): CardComparison[] 
     }
   }
 
-  // Calculate price changes where we have multiple snapshots
+  // Calculate price changes where we have multiple snapshots.
+  // Anchor to portfolio IDs rather than array indices so that duplicate
+  // card rows within the same CSV don't corrupt the calculation.
+  const earliestPortfolioId = sorted[0].id;
+  const latestPortfolioId = sorted[sorted.length - 1].id;
+
   for (const entry of map.values()) {
-    if (entry.snapshots.length >= 2) {
-      const earliest = entry.snapshots[0].marketPrice;
-      const latest = entry.snapshots[entry.snapshots.length - 1].marketPrice;
+    const earliestSnap = entry.snapshots.find((s) => s.portfolioId === earliestPortfolioId);
+    const latestSnap = entry.snapshots.find((s) => s.portfolioId === latestPortfolioId);
+    if (earliestSnap && latestSnap && earliestSnap.portfolioId !== latestSnap.portfolioId) {
+      const earliest = earliestSnap.marketPrice;
+      const latest = latestSnap.marketPrice;
       entry.priceChange = latest - earliest;
       entry.priceChangePct = earliest !== 0 ? ((latest - earliest) / earliest) * 100 : null;
     }

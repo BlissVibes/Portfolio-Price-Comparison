@@ -10,6 +10,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
 
+## [1.2.1] - 2026-02-24
+
+### Added
+- Mobile view toggle button (📱 / 🖥️) next to the Columns dropdown — auto-detects mobile screens on load and hides Card Game, Card #, Rarity, and imported portfolio columns by default, leaving Set, Grade, Change, and Change % visible
+- Columns, Mobile View, and Vendor Mode controls left-align on narrow screens instead of floating right
+
+---
+
 ## [1.1.0] - 2026-02-24
 
 ### Added

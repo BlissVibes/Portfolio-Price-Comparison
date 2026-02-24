@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import type { CardComparison, PortfolioFile } from '../types';
 
 interface Props {
@@ -11,6 +11,7 @@ type SortDir = 'asc' | 'desc';
 type FilterMode = 'all' | 'gained' | 'lost' | 'new' | 'removed';
 
 const VENDOR_DEFAULT_COLOR = '#9333ea';
+const MOBILE_BREAKPOINT = 768;
 
 function fmt(n: number) {
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
@@ -28,6 +29,11 @@ function vendorBg(hex: string) {
   return `rgba(${r}, ${g}, ${b}, 0.22)`;
 }
 
+/** Columns hidden in mobile view: card game, card #, rarity, and all portfolio columns. */
+function buildMobileHidden(portfolioIds: string[]): Set<string> {
+  return new Set(['category', 'cardNumber', 'rarity', ...portfolioIds]);
+}
+
 export default function ComparisonTable({ comparisons, portfolios }: Props) {
   const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({
     key: 'priceChange',
@@ -39,8 +45,45 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
   const [vendorMode, setVendorMode] = useState(false);
   const [vendorColor, setVendorColor] = useState(VENDOR_DEFAULT_COLOR);
   const [markedCards, setMarkedCards] = useState<Map<string, string>>(new Map());
-  const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
+
+  // Initialise mobile view and column visibility based on current screen width
+  const [mobileView, setMobileView] = useState(
+    () => window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`).matches
+  );
+  const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(() =>
+    window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`).matches
+      ? buildMobileHidden(portfolios.map((p) => p.id))
+      : new Set()
+  );
   const [showColPanel, setShowColPanel] = useState(false);
+
+  // Auto-detect screen size changes and update mobile view accordingly
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`);
+    const handler = (e: MediaQueryListEvent) => {
+      const mobile = e.matches;
+      setMobileView(mobile);
+      setHiddenColumns(mobile ? buildMobileHidden(portfolios.map((p) => p.id)) : new Set());
+    };
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, [portfolios]);
+
+  // When new portfolios are added while in mobile view, hide their columns too
+  useEffect(() => {
+    if (mobileView) {
+      setHiddenColumns(buildMobileHidden(portfolios.map((p) => p.id)));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [portfolios]);
+
+  function toggleMobileView() {
+    setMobileView((v) => {
+      const next = !v;
+      setHiddenColumns(next ? buildMobileHidden(portfolios.map((p) => p.id)) : new Set());
+      return next;
+    });
+  }
 
   function toggleColumn(key: string) {
     setHiddenColumns((prev) => {
@@ -211,6 +254,14 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
               </div>
             )}
           </div>
+
+          <button
+            className={`mobile-view-btn ${mobileView ? 'mobile-view-btn--active' : ''}`}
+            onClick={toggleMobileView}
+            title={mobileView ? 'Switch to desktop view (show all columns)' : 'Switch to mobile view (hide less important columns)'}
+          >
+            {mobileView ? '📱' : '🖥️'} Mobile View
+          </button>
 
           <button
             className={`vendor-mode-btn ${vendorMode ? 'vendor-mode-btn--active' : ''}`}

@@ -104,7 +104,7 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
           onChange={(e) => setCategoryFilter(e.target.value)}
         >
           {categories.map((c) => (
-            <option key={c} value={c}>{c === 'all' ? 'All Categories' : c}</option>
+            <option key={c} value={c}>{c === 'all' ? 'All Card Games' : c}</option>
           ))}
         </select>
         {multipleSnapshots && (
@@ -113,7 +113,16 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
               <button
                 key={f}
                 className={`filter-tab ${filter === f ? 'filter-tab--active' : ''}`}
-                onClick={() => setFilter(f)}
+                onClick={() => {
+                  setFilter(f);
+                  // Auto-adjust sort direction so the most significant changes stay on top
+                  if (sort.key === 'priceChange' || sort.key === 'priceChangePct') {
+                    setSort((prev) => ({
+                      ...prev,
+                      dir: f === 'lost' ? 'asc' : 'desc',
+                    }));
+                  }
+                }}
               >
                 {f.charAt(0).toUpperCase() + f.slice(1)}
               </button>
@@ -127,7 +136,7 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
           <thead>
             <tr>
               <th onClick={() => toggleSort('category')} className="th-sortable">
-                Category <SortIcon k="category" />
+                Card Game <SortIcon k="category" />
               </th>
               <th onClick={() => toggleSort('set')} className="th-sortable">
                 Set <SortIcon k="set" />

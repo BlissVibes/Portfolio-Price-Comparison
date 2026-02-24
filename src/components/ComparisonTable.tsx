@@ -39,6 +39,19 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
   const [vendorMode, setVendorMode] = useState(false);
   const [vendorColor, setVendorColor] = useState(VENDOR_DEFAULT_COLOR);
   const [markedCards, setMarkedCards] = useState<Map<string, string>>(new Map());
+  const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
+  const [showColPanel, setShowColPanel] = useState(false);
+
+  function toggleColumn(key: string) {
+    setHiddenColumns((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
+  const show = (key: string) => !hiddenColumns.has(key);
 
   const categories = useMemo(() => {
     const cats = new Set(comparisons.map((c) => c.category));
@@ -166,6 +179,39 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
         )}
 
         <div className="vendor-controls">
+          <div className="col-toggle-wrap">
+            <button
+              className={`col-toggle-btn ${showColPanel ? 'col-toggle-btn--active' : ''}`}
+              onClick={() => setShowColPanel((v) => !v)}
+            >
+              Columns {showColPanel ? '▲' : '▼'}
+            </button>
+            {showColPanel && (
+              <div className="col-panel">
+                {[
+                  { key: 'category', label: 'Card Game' },
+                  { key: 'set', label: 'Set' },
+                  { key: 'cardNumber', label: 'Card #' },
+                  { key: 'rarity', label: 'Rarity' },
+                  { key: 'grade', label: 'Grade' },
+                  ...sortedPortfolios.map((p) => ({ key: p.id, label: p.filename })),
+                  ...(multipleSnapshots
+                    ? [{ key: 'change', label: 'Change' }, { key: 'changePct', label: 'Change%' }]
+                    : []),
+                ].map(({ key, label }) => (
+                  <label key={key} className="col-panel-item">
+                    <input
+                      type="checkbox"
+                      checked={show(key)}
+                      onChange={() => toggleColumn(key)}
+                    />
+                    {label}
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+
           <button
             className={`vendor-mode-btn ${vendorMode ? 'vendor-mode-btn--active' : ''}`}
             onClick={() => setVendorMode((v) => !v)}
@@ -189,35 +235,41 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
         <table className="comparison-table">
           <thead>
             <tr>
-              <th onClick={() => toggleSort('category')} className="th-sortable">
-                Card Game <SortIcon k="category" />
-              </th>
-              <th onClick={() => toggleSort('set')} className="th-sortable">
-                Set <SortIcon k="set" />
-              </th>
+              {show('category') && (
+                <th onClick={() => toggleSort('category')} className="th-sortable">
+                  Card Game <SortIcon k="category" />
+                </th>
+              )}
+              {show('set') && (
+                <th onClick={() => toggleSort('set')} className="th-sortable">
+                  Set <SortIcon k="set" />
+                </th>
+              )}
               <th onClick={() => toggleSort('productName')} className="th-sortable">
                 Card <SortIcon k="productName" />
               </th>
-              <th>Card #</th>
-              <th>Rarity</th>
-              <th>Grade</th>
-              {sortedPortfolios.map((p) => (
-                <th key={p.id} className="th-price">
-                  <span className="th-price__file">{p.filename}</span>
-                  {p.marketPriceDate && (
-                    <span className="th-price__date">{p.marketPriceDate}</span>
-                  )}
+              {show('cardNumber') && <th>Card #</th>}
+              {show('rarity') && <th>Rarity</th>}
+              {show('grade') && <th>Grade</th>}
+              {sortedPortfolios.map((p) =>
+                show(p.id) ? (
+                  <th key={p.id} className="th-price">
+                    <span className="th-price__file">{p.filename}</span>
+                    {p.marketPriceDate && (
+                      <span className="th-price__date">{p.marketPriceDate}</span>
+                    )}
+                  </th>
+                ) : null
+              )}
+              {multipleSnapshots && show('change') && (
+                <th onClick={() => toggleSort('priceChange')} className="th-sortable th-price">
+                  Change <SortIcon k="priceChange" />
                 </th>
-              ))}
-              {multipleSnapshots && (
-                <>
-                  <th onClick={() => toggleSort('priceChange')} className="th-sortable th-price">
-                    Change <SortIcon k="priceChange" />
-                  </th>
-                  <th onClick={() => toggleSort('priceChangePct')} className="th-sortable th-price">
-                    Change% <SortIcon k="priceChangePct" />
-                  </th>
-                </>
+              )}
+              {multipleSnapshots && show('changePct') && (
+                <th onClick={() => toggleSort('priceChangePct')} className="th-sortable th-price">
+                  Change% <SortIcon k="priceChangePct" />
+                </th>
               )}
             </tr>
           </thead>
@@ -262,18 +314,19 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
                   style={rowStyle}
                   onClick={() => handleRowClick(card.key)}
                 >
-                  <td>{card.category}</td>
-                  <td>{card.set}</td>
+                  {show('category') && <td>{card.category}</td>}
+                  {show('set') && <td>{card.set}</td>}
                   <td className="td-name">
                     {card.productName}
                     {card.variance && card.variance !== 'Normal' && (
                       <span className="badge">{card.variance}</span>
                     )}
                   </td>
-                  <td>{card.cardNumber}</td>
-                  <td>{card.rarity}</td>
-                  <td>{card.grade !== 'Ungraded' ? card.grade : '—'}</td>
+                  {show('cardNumber') && <td>{card.cardNumber}</td>}
+                  {show('rarity') && <td>{card.rarity}</td>}
+                  {show('grade') && <td>{card.grade !== 'Ungraded' ? card.grade : '—'}</td>}
                   {sortedPortfolios.map((p) => {
+                    if (!show(p.id)) return null;
                     const snap = card.snapshots.find((s) => s.portfolioId === p.id);
                     return (
                       <td key={p.id} className="td-price">
@@ -290,17 +343,17 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
                       </td>
                     );
                   })}
-                  {multipleSnapshots && (
-                    <>
-                      <td className={`td-price td-change ${card.priceChange === null ? '' : card.priceChange >= 0 ? 'td-gain' : 'td-loss'}`}>
-                        {card.priceChange !== null
-                          ? (card.priceChange >= 0 ? '+' : '') + fmt(card.priceChange)
-                          : '—'}
-                      </td>
-                      <td className={`td-price td-change ${card.priceChangePct === null ? '' : card.priceChangePct >= 0 ? 'td-gain' : 'td-loss'}`}>
-                        {card.priceChangePct !== null ? pct(card.priceChangePct) : '—'}
-                      </td>
-                    </>
+                  {multipleSnapshots && show('change') && (
+                    <td className={`td-price td-change ${card.priceChange === null ? '' : card.priceChange >= 0 ? 'td-gain' : 'td-loss'}`}>
+                      {card.priceChange !== null
+                        ? (card.priceChange >= 0 ? '+' : '') + fmt(card.priceChange)
+                        : '—'}
+                    </td>
+                  )}
+                  {multipleSnapshots && show('changePct') && (
+                    <td className={`td-price td-change ${card.priceChangePct === null ? '' : card.priceChangePct >= 0 ? 'td-gain' : 'td-loss'}`}>
+                      {card.priceChangePct !== null ? pct(card.priceChangePct) : '—'}
+                    </td>
                   )}
                 </tr>
               );

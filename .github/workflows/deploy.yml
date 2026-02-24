@@ -5,19 +5,15 @@ on:
     branches: [main, master]
 
 permissions:
-  contents: write   # needed to commit the version bump back
-  pages: write
-  id-token: write
+  contents: write  # needed to push version bump + gh-pages branch
 
 concurrency:
   group: pages
   cancel-in-progress: true
 
 jobs:
-  bump-and-build:
+  deploy:
     runs-on: ubuntu-latest
-    outputs:
-      new_version: ${{ steps.bump.outputs.new_version }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -35,22 +31,15 @@ jobs:
       - name: Bump patch version
         id: bump
         run: |
-          # Read current version from package.json
           CURRENT=$(node -p "require('./package.json').version")
-
-          # Increment patch (x.y.z -> x.y.z+1)
           IFS='.' read -r major minor patch <<< "$CURRENT"
           NEW_VERSION="$major.$minor.$((patch + 1))"
           echo "new_version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
 
-          # Update package.json
           npm version "$NEW_VERSION" --no-git-tag-version
 
-          # Append new section to CHANGELOG.md
           DATE=$(date +%Y-%m-%d)
           TEMP=$(mktemp)
-
-          # Insert after the [Unreleased] section header
           awk -v ver="$NEW_VERSION" -v date="$DATE" '
             /^## \[Unreleased\]/ {
               print
@@ -81,18 +70,11 @@ jobs:
         env:
           GITHUB_PAGES: true
 
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+      # Pushes dist/ to the gh-pages branch — no special GitHub settings needed.
+      # In repo Settings → Pages, set source: "Deploy from a branch" → gh-pages / root
+      - name: Deploy to gh-pages branch
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          path: dist
-
-  deploy:
-    needs: bump-and-build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          commit_message: "deploy: v${{ steps.bump.outputs.new_version }}"

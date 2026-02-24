@@ -8,12 +8,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+---
+
+## [1.1.0] - 2026-02-24
+
 ### Added
 - Vendor Mode: toggle from the table controls to enter a click-to-mark workflow
 - In Vendor Mode, clicking any row marks it with the selected color (default purple) to indicate the price change has been dealt with; clicking again unmarks it
 - Color picker in Vendor Mode lets the user choose any mark color per session
 - "X marked · clear all" counter in the table footer while Vendor Mode is active
 - Removed items (cards present in earlier snapshots but dropped from the latest) now show an orange tint in all filter views
+
+### Fixed
+- Price change calculation no longer corrupted by duplicate card rows in a single CSV export
 
 ---
 

@@ -29,9 +29,55 @@ function vendorBg(hex: string) {
   return `rgba(${r}, ${g}, ${b}, 0.22)`;
 }
 
-/** Columns hidden in mobile view: card game, card #, rarity, and all portfolio columns. */
-function buildMobileHidden(portfolioIds: string[]): Set<string> {
-  return new Set(['category', 'cardNumber', 'rarity', ...portfolioIds]);
+/** Shared logic for finding the latest portfolio by date. */
+function computeLatestPortfolioId(portfolios: PortfolioFile[]): string {
+  if (portfolios.length === 0) return '';
+  const sorted = [...portfolios].sort((a, b) =>
+    a.marketPriceDate.localeCompare(b.marketPriceDate)
+  );
+  return sorted[sorted.length - 1].id;
+}
+
+/**
+ * Mobile default: hide Card Game, Card #, Rarity, and every portfolio column
+ * except the most recent one. Set, Card, Grade, latest portfolio, Change, Change% remain.
+ */
+function buildMobileHidden(portfolioIds: string[], latestId: string): Set<string> {
+  const others = portfolioIds.filter((id) => id !== latestId);
+  return new Set(['category', 'cardNumber', 'rarity', ...others]);
+}
+
+/** Grades whose full descriptive name should always be shown. */
+const FULL_GRADE_NAMES = new Set([
+  'Tag 10 Pristine',
+  'BGS 10 Pristine',
+  'BGS 10 Gem Mint',
+  'BGS 10 Black Label',
+]);
+
+/** Strip the word suffix from a grade string, e.g. "PSA 9.0 Mint" → "PSA 9.0". */
+function formatGrade(grade: string): string {
+  if (!grade || grade === 'Ungraded') return '—';
+  if (FULL_GRADE_NAMES.has(grade)) return grade;
+  const match = grade.match(/^(\S+\s+[\d.]+)/);
+  return match ? match[1] : grade;
+}
+
+/** Regex patterns that identify sealed products (booster boxes, ETBs, etc.). */
+const SEALED_PATTERNS = [
+  /\bbooster\s+box\b/i,
+  /\belite\s+trainer\s+box\b/i,
+  /\betb\b/i,
+  /\bbooster\s+bundle\b/i,
+  /\bbooster\s+pack\b/i,
+  /\bex\s+box\b/i,
+  /\bultra\s+premium\s+collection\b/i,
+  /\bupc\b/i,
+  /\btin\b/i,
+];
+
+function isSealedProduct(productName: string): boolean {
+  return SEALED_PATTERNS.some((re) => re.test(productName));
 }
 
 export default function ComparisonTable({ comparisons, portfolios }: Props) {
@@ -50,11 +96,11 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
   const [mobileView, setMobileView] = useState(
     () => window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`).matches
   );
-  const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(() =>
-    window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`).matches
-      ? buildMobileHidden(portfolios.map((p) => p.id))
-      : new Set()
-  );
+  const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(() => {
+    if (!window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`).matches) return new Set();
+    const latestId = computeLatestPortfolioId(portfolios);
+    return buildMobileHidden(portfolios.map((p) => p.id), latestId);
+  });
   const [showColPanel, setShowColPanel] = useState(false);
 
   // Auto-detect screen size changes and update mobile view accordingly
@@ -63,16 +109,22 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
     const handler = (e: MediaQueryListEvent) => {
       const mobile = e.matches;
       setMobileView(mobile);
-      setHiddenColumns(mobile ? buildMobileHidden(portfolios.map((p) => p.id)) : new Set());
+      if (mobile) {
+        const latestId = computeLatestPortfolioId(portfolios);
+        setHiddenColumns(buildMobileHidden(portfolios.map((p) => p.id), latestId));
+      } else {
+        setHiddenColumns(new Set());
+      }
     };
     mq.addEventListener('change', handler);
     return () => mq.removeEventListener('change', handler);
   }, [portfolios]);
 
-  // When new portfolios are added while in mobile view, hide their columns too
+  // When new portfolios are added while in mobile view, keep their defaults correct
   useEffect(() => {
     if (mobileView) {
-      setHiddenColumns(buildMobileHidden(portfolios.map((p) => p.id)));
+      const latestId = computeLatestPortfolioId(portfolios);
+      setHiddenColumns(buildMobileHidden(portfolios.map((p) => p.id), latestId));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [portfolios]);
@@ -80,7 +132,12 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
   function toggleMobileView() {
     setMobileView((v) => {
       const next = !v;
-      setHiddenColumns(next ? buildMobileHidden(portfolios.map((p) => p.id)) : new Set());
+      if (next) {
+        const latestId = computeLatestPortfolioId(portfolios);
+        setHiddenColumns(buildMobileHidden(portfolios.map((p) => p.id), latestId));
+      } else {
+        setHiddenColumns(new Set());
+      }
       return next;
     });
   }
@@ -103,14 +160,10 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
 
   const multipleSnapshots = portfolios.length >= 2;
 
-  // Determine the latest portfolio by date (not upload order)
-  const latestPortfolioId = useMemo(() => {
-    if (portfolios.length === 0) return '';
-    const sorted = [...portfolios].sort((a, b) =>
-      a.marketPriceDate.localeCompare(b.marketPriceDate)
-    );
-    return sorted[sorted.length - 1].id;
-  }, [portfolios]);
+  const latestPortfolioId = useMemo(
+    () => computeLatestPortfolioId(portfolios),
+    [portfolios]
+  );
 
   const filtered = useMemo(() => {
     let result = comparisons;
@@ -206,7 +259,6 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
                 className={`filter-tab ${filter === f ? 'filter-tab--active' : ''}`}
                 onClick={() => {
                   setFilter(f);
-                  // Auto-adjust sort direction so the most significant changes stay on top
                   if (sort.key === 'priceChange' || sort.key === 'priceChangePct') {
                     setSort((prev) => ({
                       ...prev,
@@ -358,6 +410,8 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
                   }
                 : undefined;
 
+              const sealed = isSealedProduct(card.productName);
+
               return (
                 <tr
                   key={card.key}
@@ -369,13 +423,14 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
                   {show('set') && <td>{card.set}</td>}
                   <td className="td-name">
                     {card.productName}
-                    {card.variance && card.variance !== 'Normal' && (
-                      <span className="badge">{card.variance}</span>
+                    {mobileView && card.cardNumber && (
+                      <span className="td-card-num"> — {card.cardNumber}</span>
                     )}
+                    {sealed && <span className="badge badge--sealed">Sealed</span>}
                   </td>
                   {show('cardNumber') && <td>{card.cardNumber}</td>}
                   {show('rarity') && <td>{card.rarity}</td>}
-                  {show('grade') && <td>{card.grade !== 'Ungraded' ? card.grade : '—'}</td>}
+                  {show('grade') && <td>{formatGrade(card.grade)}</td>}
                   {sortedPortfolios.map((p) => {
                     if (!show(p.id)) return null;
                     const snap = card.snapshots.find((s) => s.portfolioId === p.id);

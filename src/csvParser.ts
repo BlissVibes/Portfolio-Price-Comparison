@@ -58,9 +58,13 @@ export function parseCollectrCSV(
     notes: row['Notes'] || '',
   }));
 
+  // Use the portfolio name from the first card (all cards in a Collectr export share the same name)
+  const portfolioName = cards.length > 0 ? cards[0].portfolioName : '';
+
   return {
     id: crypto.randomUUID(),
     filename,
+    portfolioName,
     uploadedAt: new Date().toISOString(),
     marketPriceDate,
     cards,

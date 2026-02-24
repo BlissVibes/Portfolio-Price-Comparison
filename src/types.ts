@@ -21,6 +21,7 @@ export interface CollectrCard {
 export interface PortfolioFile {
   id: string;
   filename: string;
+  portfolioName: string;
   uploadedAt: string;
   marketPriceDate: string;
   cards: CollectrCard[];

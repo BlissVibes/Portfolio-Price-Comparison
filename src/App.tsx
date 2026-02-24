@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { version } from '../package.json';
 import FileDropZone from './components/FileDropZone';
 import SummaryCards from './components/SummaryCards';
@@ -7,11 +7,37 @@ import type { PortfolioFile } from './types';
 import { parsePortfolioFile } from './csvParser';
 import { buildComparisons, buildSummaries } from './comparison';
 
+const STORAGE_KEY = 'ppc_portfolios';
+const TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+function loadSaved(): PortfolioFile[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    const { savedAt, portfolios } = JSON.parse(raw) as { savedAt: number; portfolios: PortfolioFile[] };
+    if (Date.now() - savedAt > TTL_MS) {
+      localStorage.removeItem(STORAGE_KEY);
+      return [];
+    }
+    return portfolios;
+  } catch {
+    return [];
+  }
+}
+
 export default function App() {
-  const [portfolios, setPortfolios] = useState<PortfolioFile[]>([]);
+  const [portfolios, setPortfolios] = useState<PortfolioFile[]>(() => loadSaved());
   const [errors, setErrors] = useState<string[]>([]);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [ignoreDifferentNames, setIgnoreDifferentNames] = useState(false);
+
+  useEffect(() => {
+    if (portfolios.length === 0) {
+      localStorage.removeItem(STORAGE_KEY);
+    } else {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ savedAt: Date.now(), portfolios }));
+    }
+  }, [portfolios]);
 
   const handleFiles = useCallback((files: File[]) => {
     const newErrors: string[] = [];

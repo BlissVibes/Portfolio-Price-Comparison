@@ -275,11 +275,24 @@ body { min-height: 100vh; }
   color: #fff;
 }
 
+/* ===== Top scrollbar (desktop only) ===== */
+.table-scroll-top {
+  overflow-x: scroll;
+  overflow-y: hidden;
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+
+.table-scroll-top__inner {
+  height: 1px;
+}
+
 /* ===== Table ===== */
 .table-wrapper {
   overflow-x: auto;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 0 0 var(--radius) var(--radius);
 }
 
 .comparison-table {
@@ -547,4 +560,10 @@ body { min-height: 100vh; }
 
   /* Enable touch-friendly horizontal scroll on the table */
   .table-wrapper { -webkit-overflow-scrolling: touch; }
+
+  /* Top scrollbar is not needed on touch/mobile */
+  .table-scroll-top { display: none; }
+
+  /* Restore full border-radius on table-wrapper when top scrollbar is hidden */
+  .table-wrapper { border-radius: var(--radius); }
 }

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import type { CardComparison, PortfolioFile } from '../types';
 
 interface Props {
@@ -107,6 +107,46 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
     return buildMobileHidden(portfolios.map((p) => p.id), latestId);
   });
   const [showColPanel, setShowColPanel] = useState(false);
+
+  const topScrollRef = useRef<HTMLDivElement>(null);
+  const topScrollInnerRef = useRef<HTMLDivElement>(null);
+  const tableWrapperRef = useRef<HTMLDivElement>(null);
+
+  // Keep the top scrollbar width in sync with the table's scroll width
+  useEffect(() => {
+    const top = topScrollRef.current;
+    const inner = topScrollInnerRef.current;
+    const wrapper = tableWrapperRef.current;
+    if (!top || !inner || !wrapper) return;
+
+    const updateWidth = () => { inner.style.width = wrapper.scrollWidth + 'px'; };
+    updateWidth();
+    const ro = new ResizeObserver(updateWidth);
+    ro.observe(wrapper);
+
+    let syncingFromTop = false;
+    let syncingFromWrapper = false;
+    const onTopScroll = () => {
+      if (syncingFromWrapper) return;
+      syncingFromTop = true;
+      wrapper.scrollLeft = top.scrollLeft;
+      syncingFromTop = false;
+    };
+    const onWrapperScroll = () => {
+      if (syncingFromTop) return;
+      syncingFromWrapper = true;
+      top.scrollLeft = wrapper.scrollLeft;
+      syncingFromWrapper = false;
+    };
+
+    top.addEventListener('scroll', onTopScroll);
+    wrapper.addEventListener('scroll', onWrapperScroll);
+    return () => {
+      ro.disconnect();
+      top.removeEventListener('scroll', onTopScroll);
+      wrapper.removeEventListener('scroll', onWrapperScroll);
+    };
+  }, []);
 
   // Auto-detect screen size changes and update mobile view accordingly
   useEffect(() => {
@@ -339,7 +379,11 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
         </div>
       </div>
 
-      <div className="table-wrapper">
+      <div className="table-scroll-top" ref={topScrollRef}>
+        <div className="table-scroll-top__inner" ref={topScrollInnerRef} />
+      </div>
+
+      <div className="table-wrapper" ref={tableWrapperRef}>
         <table className="comparison-table">
           <thead>
             <tr>

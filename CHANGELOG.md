@@ -17,10 +17,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
 
-## [0.0.1] - 2026-02-24
+## [1.0.1] - 2026-02-24
 
-### Changed
-- Deployed version 0.0.1
+### Added
+- Display version number in app header
+- CSV portfolio import feature
+
+### Fixed
+- Sort direction reset when switching to Lost filter
+- New/Removed filters now use date-sorted portfolio ID
 
 ---
 

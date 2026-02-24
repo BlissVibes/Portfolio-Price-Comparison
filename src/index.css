@@ -51,6 +51,12 @@ body { min-height: 100vh; }
   margin-bottom: 4px;
 }
 
+.app-version {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+
 .app-subtitle {
   color: var(--text-muted);
   font-size: 0.95rem;

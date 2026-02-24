@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { version } from '../package.json';
 import FileDropZone from './components/FileDropZone';
 import SummaryCards from './components/SummaryCards';
 import ComparisonTable from './components/ComparisonTable';
@@ -84,7 +85,7 @@ export default function App() {
     <div className="app">
       <header className="app-header">
         <h1 className="app-title">Portfolio Price Comparison</h1>
-        <p className="app-byline">by BlissTCG</p>
+        <p className="app-byline">by BlissTCG <span className="app-version">v{version}</span></p>
         <p className="app-subtitle">Import Collectr CSV exports to track and compare card prices over time</p>
       </header>
 

@@ -10,6 +10,22 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
 
+## [1.2.2] - 2026-02-24
+
+### Fixed
+- Filter tabs (All / Gained / Lost / New / Removed) no longer disappear on mobile — caused by `flex-wrap` creating an invisible overflow column
+- Table horizontal scrolling restored on mobile (`white-space: nowrap` on cells, `-webkit-overflow-scrolling: touch`)
+- Columns dropdown no longer clips off the left edge of the screen on mobile (opens rightward)
+- Columns dropdown still lists all columns on mobile; mobile view only changes the checked defaults, not which options appear
+
+### Changed
+- Mobile default columns revised: Set, Card, Grade, most-recent portfolio, Change $, Change % are shown; Card Game, Card #, Rarity, and older portfolio columns are hidden by default
+- Card number appended inline to card name on mobile view (e.g. Charizard — 11/102) since the Card # column is hidden
+- Grade display now shows only the grade identifier (e.g. PSA 9.0, BGS 9.5) — full descriptive name kept only for Tag 10 Pristine, BGS 10 Pristine, BGS 10 Gem Mint, and BGS 10 Black Label
+- Variant badge removed; replaced with a yellow Sealed badge for booster boxes, ETBs, booster bundles, booster packs, EX boxes, Ultra Premium Collections, and tins
+
+---
+
 ## [1.2.1] - 2026-02-24
 
 ### Added

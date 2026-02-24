@@ -338,12 +338,21 @@ body { min-height: 100vh; }
   display: inline-block;
   margin-left: 6px;
   padding: 1px 6px;
-  background: rgba(108, 99, 255, 0.2);
-  color: #a78bfa;
   border-radius: 4px;
   font-size: 0.7rem;
   font-weight: 500;
   vertical-align: middle;
+}
+
+.badge--sealed {
+  background: rgba(234, 179, 8, 0.18);
+  color: #fbbf24;
+}
+
+.td-card-num {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 400;
 }
 
 .td-price { text-align: right; font-variant-numeric: tabular-nums; }
@@ -518,6 +527,28 @@ body { min-height: 100vh; }
 @media (max-width: 600px) {
   .app-title { font-size: 1.5rem; }
   .summary-grid { grid-template-columns: 1fr; }
-  .table-controls { flex-direction: column; align-items: stretch; }
-  .vendor-controls { margin-left: 0; align-self: flex-start; flex-wrap: wrap; }
+
+  /* Stack controls vertically; disable flex-wrap so items never overflow into
+     a hidden second column (which was hiding the filter tabs). */
+  .table-controls {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+  }
+
+  /* Ensure filter tabs are always visible and wrap their buttons onto new lines */
+  .filter-tabs { width: 100%; }
+
+  /* Left-align Columns / Mobile View / Vendor Mode group */
+  .vendor-controls { margin-left: 0; flex-wrap: wrap; }
+
+  /* Column panel opens right-ward from the button instead of left-ward */
+  .col-panel { right: auto; left: 0; }
+
+  /* Enable touch-friendly horizontal scroll on the table */
+  .table-wrapper { -webkit-overflow-scrolling: touch; }
+
+  /* Prevent cell text from collapsing to zero width so the table stays scrollable */
+  .comparison-table td,
+  .comparison-table th { white-space: nowrap; }
 }

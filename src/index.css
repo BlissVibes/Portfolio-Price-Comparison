@@ -560,10 +560,4 @@ body { min-height: 100vh; }
 
   /* Enable touch-friendly horizontal scroll on the table */
   .table-wrapper { -webkit-overflow-scrolling: touch; }
-
-  /* Top scrollbar is not needed on touch/mobile */
-  .table-scroll-top { display: none; }
-
-  /* Restore full border-radius on table-wrapper when top scrollbar is hidden */
-  .table-wrapper { border-radius: var(--radius); }
 }

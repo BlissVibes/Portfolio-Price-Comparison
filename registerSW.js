@@ -1,0 +1,1 @@
+if('serviceWorker' in navigator) {window.addEventListener('load', () => {navigator.serviceWorker.register('/Portfolio-Price-Comparison/sw.js', { scope: '/Portfolio-Price-Comparison/' })})}

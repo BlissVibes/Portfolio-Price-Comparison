@@ -8,7 +8,7 @@ interface Props {
 
 type SortKey = 'productName' | 'set' | 'category' | 'priceChange' | 'priceChangePct';
 type SortDir = 'asc' | 'desc';
-type FilterMode = 'all' | 'gained' | 'lost' | 'new' | 'removed';
+type FilterMode = 'all' | 'gained' | 'lost' | 'new' | 'removed' | 'sealed';
 
 const VENDOR_DEFAULT_COLOR = '#9333ea';
 const MOBILE_BREAKPOINT = 768;
@@ -84,7 +84,8 @@ function isSealedProduct(productName: string): boolean {
 function buildEbayUrl(card: CardComparison): string {
   const gradeFormatted = formatGrade(card.grade);
   const grade = gradeFormatted === '—' ? 'raw' : gradeFormatted;
-  const query = [card.category, card.set, card.productName, card.cardNumber, grade]
+  const sealed = isSealedProduct(card.productName);
+  const query = [card.category, sealed ? null : card.set, card.productName, card.cardNumber, grade]
     .filter(Boolean)
     .join(' ');
   return `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(query)}&LH_Complete=1&LH_Sold=1`;
@@ -92,7 +93,8 @@ function buildEbayUrl(card: CardComparison): string {
 
 /** Build a TCGPlayer search URL for a card (no grade). */
 function buildTcgPlayerUrl(card: CardComparison): string {
-  const query = [card.category, card.set, card.productName, card.cardNumber]
+  const sealed = isSealedProduct(card.productName);
+  const query = [card.category, sealed ? null : card.set, card.productName, card.cardNumber]
     .filter(Boolean)
     .join(' ');
   return `https://www.tcgplayer.com/search/all/product?q=${encodeURIComponent(query)}`;
@@ -251,6 +253,7 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
       if (filter === 'new') result = result.filter((c) => c.snapshots.length === 1 && c.snapshots[0].portfolioId === latestPortfolioId);
       if (filter === 'removed') result = result.filter((c) => c.snapshots.length === 1 && c.snapshots[0].portfolioId !== latestPortfolioId);
     }
+    if (filter === 'sealed') result = result.filter((c) => isSealedProduct(c.productName));
 
     return [...result].sort((a, b) => {
       let av: number | string = 0;
@@ -314,27 +317,25 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
             <option key={c} value={c}>{c === 'all' ? 'All Card Games' : c}</option>
           ))}
         </select>
-        {multipleSnapshots && (
-          <div className="filter-tabs">
-            {(['all', 'gained', 'lost', 'new', 'removed'] as FilterMode[]).map((f) => (
-              <button
-                key={f}
-                className={`filter-tab ${filter === f ? 'filter-tab--active' : ''}`}
-                onClick={() => {
-                  setFilter(f);
-                  if (sort.key === 'priceChange' || sort.key === 'priceChangePct') {
-                    setSort((prev) => ({
-                      ...prev,
-                      dir: f === 'lost' ? 'asc' : 'desc',
-                    }));
-                  }
-                }}
-              >
-                {f.charAt(0).toUpperCase() + f.slice(1)}
-              </button>
-            ))}
-          </div>
-        )}
+        <div className="filter-tabs">
+          {(['all', ...(multipleSnapshots ? ['gained', 'lost', 'new', 'removed'] : []), 'sealed'] as FilterMode[]).map((f) => (
+            <button
+              key={f}
+              className={`filter-tab ${filter === f ? (f === 'sealed' ? 'filter-tab--active-sealed' : 'filter-tab--active') : ''}`}
+              onClick={() => {
+                setFilter(f);
+                if (sort.key === 'priceChange' || sort.key === 'priceChangePct') {
+                  setSort((prev) => ({
+                    ...prev,
+                    dir: f === 'lost' ? 'asc' : 'desc',
+                  }));
+                }
+              }}
+            >
+              {f.charAt(0).toUpperCase() + f.slice(1)}
+            </button>
+          ))}
+        </div>
 
         <div className="vendor-controls">
           <div className="col-toggle-wrap">
@@ -417,7 +418,7 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
                 </th>
               )}
               <th onClick={() => toggleSort('productName')} className="th-sortable">
-                Card <SortIcon k="productName" />
+                Item <SortIcon k="productName" />
               </th>
               {show('cardNumber') && <th>Card #</th>}
               {show('rarity') && <th>Rarity</th>}

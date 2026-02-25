@@ -63,7 +63,7 @@ function formatGrade(grade: string): string {
   return match ? match[1] : grade;
 }
 
-/** Map a full condition string to its standard abbreviation (NM, LP, MP, HP, DMG). */
+/** Map a condition string to its standard abbreviation (NM, LP, MP, HP, DMG). */
 function formatCondition(condition: string): string {
   if (!condition) return '';
   const c = condition.toLowerCase().trim();
@@ -72,6 +72,18 @@ function formatCondition(condition: string): string {
   if (c.startsWith('moderately played') || c.startsWith('moderate play')) return 'MP';
   if (c.startsWith('heavily played') || c.startsWith('heavy play')) return 'HP';
   if (c.startsWith('damaged')) return 'DMG';
+  return condition;
+}
+
+/** Normalize a condition string to its canonical full name. */
+function normalizeCondition(condition: string): string {
+  if (!condition) return '';
+  const c = condition.toLowerCase().trim();
+  if (c.startsWith('near mint')) return 'Near Mint';
+  if (c.startsWith('lightly played') || c.startsWith('light play')) return 'Lightly Played';
+  if (c.startsWith('moderately played') || c.startsWith('moderate play')) return 'Moderately Played';
+  if (c.startsWith('heavily played') || c.startsWith('heavy play')) return 'Heavily Played';
+  if (c.startsWith('damaged')) return 'Damaged';
   return condition;
 }
 
@@ -96,8 +108,8 @@ function isSealedProduct(productName: string): boolean {
 function buildEbayUrl(card: CardComparison): string {
   const sealed = isSealedProduct(card.productName);
   const gradeFormatted = formatGrade(card.grade);
-  const conditionAbbr = formatCondition(card.cardCondition);
-  const grade = sealed ? null : (gradeFormatted === '—' ? (conditionAbbr || 'raw') : gradeFormatted);
+  const conditionFull = normalizeCondition(card.cardCondition);
+  const grade = sealed ? null : (gradeFormatted === '—' ? ['raw', conditionFull].filter(Boolean).join(' ') : gradeFormatted);
   const query = [card.category, sealed ? null : card.set, card.productName, card.cardNumber, grade]
     .filter(Boolean)
     .join(' ');

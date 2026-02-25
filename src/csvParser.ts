@@ -35,12 +35,22 @@ const KNOWN_LANG_CODES = new Set([
 ]);
 
 function extractLanguageFromName(name: string): string {
-  // Match all (XX) / (XXX) tokens, prefer last one that is a known language code
+  // 1. Explicit (XX)/(XXX) code takes highest priority
   const matches = [...name.matchAll(/\(([A-Z]{2,3})\)/g)];
   for (const m of matches.reverse()) {
     if (KNOWN_LANG_CODES.has(m[1])) return m[1];
   }
-  return '';
+
+  // 2. Detect language from Unicode script characters in the name
+  // Hiragana (U+3040–309F) or Katakana (U+30A0–30FF) → uniquely Japanese
+  if (/[\u3040-\u309F\u30A0-\u30FF]/.test(name)) return 'JP';
+  // Hangul syllables / jamo → uniquely Korean
+  if (/[\uAC00-\uD7AF\u1100-\u11FF]/.test(name)) return 'KR';
+  // CJK unified ideographs without kana → Chinese
+  if (/[\u4E00-\u9FFF\u3400-\u4DBF]/.test(name)) return 'CN';
+
+  // 3. No language marker detected — assume English
+  return 'EN';
 }
 
 function extractMarketPriceDate(headers: string[]): string {
@@ -301,17 +311,19 @@ export function parseTCGPlayerCSV(
 
   const cards: CollectrCard[] = result.data
     .filter((row) => row['TCGplayer Id'])
-    .map((row) => ({
+    .map((row) => {
+      const productName = row['Product Name'] || '';
+      return {
       portfolioName: '',
       category: row['Product Line'] || '',
       set: row['Set Name'] || '',
-      productName: row['Product Name'] || '',
+      productName,
       cardNumber: row['Number'] || '',
       rarity: row['Rarity'] || '',
       variance: '',
       grade: '',
       cardCondition: row['Condition'] || '',
-      language: '',
+      language: extractLanguageFromName(productName),
       averageCostPaid: 0,
       quantity: parseInt(row['Total Quantity'] || '1', 10) || 1,
       marketPrice: parseFloat(row['TCG Market Price'] || '0') || 0,
@@ -320,7 +332,8 @@ export function parseTCGPlayerCSV(
       watchlist: false,
       dateAdded: '',
       notes: '',
-    }));
+      };
+    });
 
   if (cards.length === 0) return null;
 
@@ -368,17 +381,18 @@ export function parseTCGPlayerText(
       condition = parts[0] ?? '';
     }
 
+    const productName = name.trim();
     cards.push({
       portfolioName: '',
       category: 'Pokemon',
       set: resolveSetCode(setCode),
-      productName: name.trim(),
+      productName,
       cardNumber,
       rarity: '',
       variance: variant,
       grade: '',
       cardCondition: condition,
-      language: '',
+      language: extractLanguageFromName(productName),
       averageCostPaid: 0,
       quantity: parseInt(qtyStr, 10) || 1,
       marketPrice: parseFloat(priceStr) || 0,

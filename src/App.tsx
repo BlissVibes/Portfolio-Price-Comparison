@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { version } from '../package.json';
 import FileDropZone from './components/FileDropZone';
 import SummaryCards from './components/SummaryCards';
@@ -9,6 +9,24 @@ import { buildComparisons, buildSummaries } from './comparison';
 
 const STORAGE_KEY = 'ppc_portfolios';
 const TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+interface AppSettings {
+  darkMode: boolean;
+  includeNmInEbay: boolean;
+}
+
+const SETTINGS_KEY = 'ppc_settings';
+const DEFAULT_SETTINGS: AppSettings = { darkMode: true, includeNmInEbay: false };
+
+function loadSettings(): AppSettings {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if (!raw) return DEFAULT_SETTINGS;
+    return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
+  } catch {
+    return DEFAULT_SETTINGS;
+  }
+}
 
 function loadSaved(): PortfolioFile[] {
   try {
@@ -30,6 +48,31 @@ export default function App() {
   const [errors, setErrors] = useState<string[]>([]);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [ignoreDifferentNames, setIgnoreDifferentNames] = useState(false);
+  const [settings, setSettings] = useState<AppSettings>(() => loadSettings());
+  const [showSettings, setShowSettings] = useState(false);
+  const settingsRef = useRef<HTMLDivElement>(null);
+
+  // Persist settings and apply theme
+  useEffect(() => {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    document.documentElement.setAttribute('data-theme', settings.darkMode ? 'dark' : 'light');
+  }, [settings]);
+
+  // Close settings panel when clicking outside
+  useEffect(() => {
+    if (!showSettings) return;
+    function onClickOutside(e: MouseEvent) {
+      if (settingsRef.current && !settingsRef.current.contains(e.target as Node)) {
+        setShowSettings(false);
+      }
+    }
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, [showSettings]);
+
+  function updateSetting<K extends keyof AppSettings>(key: K, value: AppSettings[K]) {
+    setSettings((prev) => ({ ...prev, [key]: value }));
+  }
 
   useEffect(() => {
     if (portfolios.length === 0) {
@@ -117,6 +160,45 @@ export default function App() {
 
   return (
     <div className="app">
+      {/* Settings cog — fixed top-right corner */}
+      <div className="settings-wrap" ref={settingsRef}>
+        <button
+          className={`settings-cog${showSettings ? ' settings-cog--open' : ''}`}
+          onClick={() => setShowSettings((v) => !v)}
+          title="Settings"
+          aria-label="Settings"
+        >
+          ⚙
+        </button>
+        {showSettings && (
+          <div className="settings-panel">
+            <div className="settings-panel__title">Settings</div>
+            <label className="settings-item">
+              <span className="settings-item__label">Dark mode</span>
+              <div
+                className={`settings-toggle${settings.darkMode ? ' settings-toggle--on' : ''}`}
+                onClick={() => updateSetting('darkMode', !settings.darkMode)}
+                role="switch"
+                aria-checked={settings.darkMode}
+              >
+                <div className="settings-toggle__thumb" />
+              </div>
+            </label>
+            <label className="settings-item">
+              <span className="settings-item__label">Use "NM" in eBay searches for Near Mint raw cards</span>
+              <div
+                className={`settings-toggle${settings.includeNmInEbay ? ' settings-toggle--on' : ''}`}
+                onClick={() => updateSetting('includeNmInEbay', !settings.includeNmInEbay)}
+                role="switch"
+                aria-checked={settings.includeNmInEbay}
+              >
+                <div className="settings-toggle__thumb" />
+              </div>
+            </label>
+          </div>
+        )}
+      </div>
+
       <header className="app-header">
         <h1 className="app-title">Portfolio Price Comparison</h1>
         <p className="app-byline">by BlissTCG <span className="app-version">v{version}</span></p>
@@ -160,7 +242,7 @@ export default function App() {
         {portfolios.length > 0 && (
           <>
             <SummaryCards summaries={summaries} onRemove={removePortfolio} />
-            <ComparisonTable comparisons={comparisons} portfolios={portfolios} />
+            <ComparisonTable comparisons={comparisons} portfolios={portfolios} includeNmInEbay={settings.includeNmInEbay} />
           </>
         )}
       </main>

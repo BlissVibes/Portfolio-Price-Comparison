@@ -4,6 +4,7 @@ import type { CardComparison, PortfolioFile } from '../types';
 interface Props {
   comparisons: CardComparison[];
   portfolios: PortfolioFile[];
+  includeNmInEbay: boolean;
 }
 
 type SortKey = 'productName' | 'set' | 'category' | 'priceChange' | 'priceChangePct';
@@ -75,18 +76,6 @@ function formatCondition(condition: string): string {
   return condition;
 }
 
-/** Normalize a condition string to its canonical full name. */
-function normalizeCondition(condition: string): string {
-  if (!condition) return '';
-  const c = condition.toLowerCase().trim();
-  if (c.startsWith('near mint')) return 'Near Mint';
-  if (c.startsWith('lightly played') || c.startsWith('light play')) return 'Lightly Played';
-  if (c.startsWith('moderately played') || c.startsWith('moderate play')) return 'Moderately Played';
-  if (c.startsWith('heavily played') || c.startsWith('heavy play')) return 'Heavily Played';
-  if (c.startsWith('damaged')) return 'Damaged';
-  return condition;
-}
-
 /** Regex patterns that identify sealed products (booster boxes, ETBs, etc.). */
 const SEALED_PATTERNS = [
   /\bbooster\s+box\b/i,
@@ -105,12 +94,22 @@ function isSealedProduct(productName: string): boolean {
 }
 
 /** Build an eBay sold-listings search URL for a card. */
-function buildEbayUrl(card: CardComparison): string {
+function buildEbayUrl(card: CardComparison, includeNmInEbay: boolean): string {
   const sealed = isSealedProduct(card.productName);
   const gradeFormatted = formatGrade(card.grade);
-  const conditionFull = normalizeCondition(card.cardCondition);
-  const grade = sealed ? null : (gradeFormatted === '—' ? ['raw', conditionFull].filter(Boolean).join(' ') : gradeFormatted);
-  const query = [card.category, sealed ? null : card.set, card.productName, card.cardNumber, grade]
+  let gradePart: string | null = null;
+  if (!sealed) {
+    if (gradeFormatted !== '—') {
+      gradePart = gradeFormatted;
+    } else {
+      const abbr = formatCondition(card.cardCondition);
+      // Include condition abbreviation for raw cards, but skip NM unless opted in
+      if (abbr && !(abbr === 'NM' && !includeNmInEbay)) {
+        gradePart = abbr;
+      }
+    }
+  }
+  const query = [card.category, sealed ? null : card.set, card.productName, card.cardNumber, gradePart]
     .filter(Boolean)
     .join(' ');
   return `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(query)}&LH_Complete=1&LH_Sold=1`;
@@ -130,7 +129,7 @@ function stripFileExtension(filename: string): string {
   return filename.replace(/\.[^/.]+$/, '');
 }
 
-export default function ComparisonTable({ comparisons, portfolios }: Props) {
+export default function ComparisonTable({ comparisons, portfolios, includeNmInEbay }: Props) {
   const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({
     key: 'priceChange',
     dir: 'desc',
@@ -348,11 +347,12 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
               key={f}
               className={`filter-tab ${filter === f ? (f === 'sealed' ? 'filter-tab--active-sealed' : 'filter-tab--active') : ''}`}
               onClick={() => {
-                setFilter(f);
+                const next: FilterMode = filter === f ? 'all' : f;
+                setFilter(next);
                 if (sort.key === 'priceChange' || sort.key === 'priceChangePct') {
                   setSort((prev) => ({
                     ...prev,
-                    dir: f === 'lost' ? 'asc' : 'desc',
+                    dir: next === 'lost' ? 'asc' : 'desc',
                   }));
                 }
               }}
@@ -565,7 +565,7 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
                   {show('links') && (
                     <td className="td-links">
                       <a
-                        href={buildEbayUrl(card)}
+                        href={buildEbayUrl(card, includeNmInEbay)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="link-btn link-btn--ebay"

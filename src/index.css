@@ -476,6 +476,12 @@ body { min-height: 100vh; }
 .td-loss { color: var(--loss); }
 .td-neutral { color: var(--neutral); }
 
+.td-inline-change {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
 .row--neutral { background: var(--neutral-bg); }
 
 .empty-row { text-align: center; color: var(--text-muted); padding: 40px; }

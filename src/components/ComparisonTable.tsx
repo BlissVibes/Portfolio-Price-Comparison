@@ -41,12 +41,13 @@ function computeLatestPortfolioId(portfolios: PortfolioFile[]): string {
 }
 
 /**
- * Mobile default: hide Card Game, Card #, Rarity, and every portfolio column
- * except the most recent one. Set, Card, Grade, latest portfolio, Change, Change% remain.
+ * Mobile default: hide Card Game, Card #, Rarity, Change, Change%, and every
+ * portfolio column except the most recent one. The Change dollar amount is
+ * shown inline beneath the latest portfolio price instead.
  */
 function buildMobileHidden(portfolioIds: string[], latestId: string): Set<string> {
   const others = portfolioIds.filter((id) => id !== latestId);
-  return new Set(['category', 'cardNumber', 'rarity', 'language', ...others]);
+  return new Set(['category', 'cardNumber', 'rarity', 'language', 'change', 'changePct', ...others]);
 }
 
 /** Grades whose full descriptive name should always be shown. */
@@ -559,6 +560,8 @@ export default function ComparisonTable({ comparisons, portfolios, includeNmInEb
                   {sortedPortfolios.map((p) => {
                     if (!show(p.id)) return null;
                     const snap = card.snapshots.find((s) => s.portfolioId === p.id);
+                    const isLatest = p.id === latestPortfolioId;
+                    const showInlineChange = mobileView && isLatest && multipleSnapshots && card.priceChange !== null;
                     return (
                       <td key={p.id} className="td-price">
                         {snap ? (
@@ -566,6 +569,11 @@ export default function ComparisonTable({ comparisons, portfolios, includeNmInEb
                             {fmt(snap.marketPrice)}
                             {snap.quantity > 1 && (
                               <span className="qty"> ×{snap.quantity}</span>
+                            )}
+                            {showInlineChange && (
+                              <span className={`td-inline-change ${Math.abs(card.priceChange!) <= 0.50 ? 'td-neutral' : card.priceChange! > 0 ? 'td-gain' : 'td-loss'}`}>
+                                {(card.priceChange! >= 0 ? '+' : '') + fmt(card.priceChange!)}
+                              </span>
                             )}
                           </>
                         ) : (

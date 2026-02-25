@@ -3,6 +3,33 @@ import type { CollectrCard, PortfolioFile } from './types';
 
 // ───── Collectr helpers ─────
 
+const LANGUAGE_ALIASES: Record<string, string> = {
+  english: 'EN',
+  japanese: 'JP',
+  korean: 'KR',
+  chinese: 'CN',
+  'chinese traditional': 'CN',
+  'chinese simplified': 'CN',
+  'trad. chinese': 'CN',
+  german: 'DE',
+  french: 'FR',
+  italian: 'IT',
+  spanish: 'ES',
+  portuguese: 'PT',
+  dutch: 'NL',
+  polish: 'PL',
+  russian: 'RU',
+  indonesian: 'ID',
+  thai: 'TH',
+};
+
+function normalizeLanguage(raw: string): string {
+  if (!raw) return '';
+  const trimmed = raw.trim();
+  const lower = trimmed.toLowerCase();
+  return LANGUAGE_ALIASES[lower] ?? trimmed.toUpperCase();
+}
+
 function extractMarketPriceDate(headers: string[]): string {
   const marketHeader = headers.find((h) => h.toLowerCase().includes('market price'));
   if (!marketHeader) return '';
@@ -216,7 +243,7 @@ export function parseCollectrCSV(
     variance: row['Variance'] || '',
     grade: row['Grade'] || '',
     cardCondition: row['Card Condition'] || '',
-    language: row['Language'] || '',
+    language: normalizeLanguage(row['Language'] || ''),
     averageCostPaid: parseFloat(row['Average Cost Paid'] || '0') || 0,
     quantity: parseInt(row['Quantity'] || '1', 10) || 1,
     marketPrice: parseFloat(row[marketPriceKey] || '0') || 0,

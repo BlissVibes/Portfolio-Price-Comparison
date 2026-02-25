@@ -130,7 +130,9 @@ function buildEbayUrl(card: CardComparison, includeNmInEbay: boolean, includeLan
       }
     }
   }
-  const languagePart = includeLanguageInEbay && card.language ? card.language : null;
+  // Always include language for 151 set — EN and JP share the same set name in searches
+  const force151Language = card.set === '151';
+  const languagePart = (includeLanguageInEbay || force151Language) && card.language ? card.language : null;
   const query = [card.category, languagePart, sealed ? null : card.set, card.productName, card.cardNumber, gradePart]
     .filter(Boolean)
     .join(' ');

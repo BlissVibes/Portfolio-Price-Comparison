@@ -357,6 +357,15 @@ body { min-height: 100vh; }
   color: #fff;
 }
 
+.filter-tabs__divider {
+  color: var(--border);
+  font-size: 1rem;
+  line-height: 1;
+  align-self: center;
+  user-select: none;
+  padding: 0 2px;
+}
+
 .filter-tab--active-sealed {
   background: var(--neutral);
   border-color: var(--neutral);

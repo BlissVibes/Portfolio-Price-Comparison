@@ -10,7 +10,7 @@ interface Props {
 
 type SortKey = 'productName' | 'set' | 'category' | 'priceChange' | 'priceChangePct' | 'language';
 type SortDir = 'asc' | 'desc';
-type FilterMode = 'all' | 'gained' | 'lost' | 'new' | 'removed' | 'sealed';
+type FilterMode = 'all' | 'gained' | 'lost' | 'new' | 'removed' | 'sealed' | 'slabs';
 
 const VENDOR_DEFAULT_COLOR = '#9333ea';
 const MOBILE_BREAKPOINT = 768;
@@ -284,6 +284,7 @@ export default function ComparisonTable({ comparisons, portfolios, includeNmInEb
       if (filter === 'removed') result = result.filter((c) => c.snapshots.length === 1 && c.snapshots[0].portfolioId !== latestPortfolioId);
     }
     if (filter === 'sealed') result = result.filter((c) => isSealedProduct(c.productName));
+    if (filter === 'slabs') result = result.filter((c) => c.grade && c.grade !== 'Ungraded');
 
     return [...result].sort((a, b) => {
       let av: number | string = 0;
@@ -348,19 +349,29 @@ export default function ComparisonTable({ comparisons, portfolios, includeNmInEb
           ))}
         </select>
         <div className="filter-tabs">
-          {(['all', ...(multipleSnapshots ? ['gained', 'lost', 'new', 'removed'] : []), 'sealed'] as FilterMode[]).map((f) => (
+          {(['all', ...(multipleSnapshots ? ['gained', 'lost', 'new', 'removed'] : [])] as FilterMode[]).map((f) => (
             <button
               key={f}
-              className={`filter-tab ${filter === f ? (f === 'sealed' ? 'filter-tab--active-sealed' : 'filter-tab--active') : ''}`}
+              className={`filter-tab ${filter === f ? 'filter-tab--active' : ''}`}
               onClick={() => {
                 const next: FilterMode = filter === f ? 'all' : f;
                 setFilter(next);
                 if (sort.key === 'priceChange' || sort.key === 'priceChangePct') {
-                  setSort((prev) => ({
-                    ...prev,
-                    dir: next === 'lost' ? 'asc' : 'desc',
-                  }));
+                  setSort((prev) => ({ ...prev, dir: next === 'lost' ? 'asc' : 'desc' }));
                 }
+              }}
+            >
+              {f.charAt(0).toUpperCase() + f.slice(1)}
+            </button>
+          ))}
+          <span className="filter-tabs__divider">|</span>
+          {(['slabs', 'sealed'] as FilterMode[]).map((f) => (
+            <button
+              key={f}
+              className={`filter-tab ${filter === f ? 'filter-tab--active-sealed' : ''}`}
+              onClick={() => {
+                const next: FilterMode = filter === f ? 'all' : f;
+                setFilter(next);
               }}
             >
               {f.charAt(0).toUpperCase() + f.slice(1)}

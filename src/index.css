@@ -300,6 +300,41 @@ body { min-height: 100vh; }
 .stat--gain .stat__value { color: var(--gain); }
 .stat--loss .stat__value { color: var(--loss); }
 
+/* ===== Portfolio Delta ===== */
+.delta-section { margin-bottom: 24px; }
+
+.delta-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.delta-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+  text-align: center;
+}
+
+.delta-box__label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.delta-box__value { font-size: 1.4rem; font-weight: 700; }
+
+.delta-box--gain { border-color: var(--gain); background: var(--gain-bg); }
+.delta-box--gain .delta-box__value { color: var(--gain); }
+.delta-box--loss { border-color: var(--loss); background: var(--loss-bg); }
+.delta-box--loss .delta-box__value { color: var(--loss); }
+
 /* ===== Table Controls ===== */
 .table-controls {
   display: flex;
@@ -817,6 +852,7 @@ body { min-height: 100vh; }
 @media (max-width: 600px) {
   .app-title { font-size: 1.5rem; }
   .summary-grid { grid-template-columns: 1fr; }
+  .delta-grid { grid-template-columns: 1fr 1fr; }
 
   /* Stack controls vertically; disable flex-wrap so items never overflow into
      a hidden second column (which was hiding the filter tabs). */

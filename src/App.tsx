@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { version } from '../package.json';
 import FileDropZone from './components/FileDropZone';
 import SummaryCards from './components/SummaryCards';
+import PortfolioDelta from './components/PortfolioDelta';
 import ComparisonTable from './components/ComparisonTable';
 import type { PortfolioFile } from './types';
 import { parsePortfolioFile, extractLanguageFromName } from './csvParser';
@@ -301,6 +302,13 @@ export default function App() {
         {portfolios.length > 0 && (
           <>
             <SummaryCards summaries={summaries} onRemove={removePortfolio} />
+            {summaries.length >= 2 && (
+              <PortfolioDelta
+                earliest={summaries[0]}
+                latest={summaries[summaries.length - 1]}
+                comparisons={comparisons}
+              />
+            )}
             <ComparisonTable comparisons={comparisons} portfolios={portfolios} includeNmInEbay={settings.includeNmInEbay} includeLanguageInEbay={settings.includeLanguageInEbay} defaultLanguage={settings.defaultLanguage} showLanguageFlags={settings.showLanguageFlags} englishCountry={settings.englishCountry} />
           </>
         )}

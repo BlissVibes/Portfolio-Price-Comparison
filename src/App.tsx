@@ -14,10 +14,13 @@ interface AppSettings {
   darkMode: boolean;
   includeNmInEbay: boolean;
   includeLanguageInEbay: boolean;
+  defaultLanguage: string;
+  showLanguageFlags: boolean;
+  englishCountry: string;
 }
 
 const SETTINGS_KEY = 'ppc_settings';
-const DEFAULT_SETTINGS: AppSettings = { darkMode: true, includeNmInEbay: false, includeLanguageInEbay: false };
+const DEFAULT_SETTINGS: AppSettings = { darkMode: true, includeNmInEbay: false, includeLanguageInEbay: false, defaultLanguage: 'EN', showLanguageFlags: true, englishCountry: 'US' };
 
 function loadSettings(): AppSettings {
   try {
@@ -207,6 +210,42 @@ export default function App() {
                 <div className="settings-toggle__thumb" />
               </div>
             </label>
+            <label className="settings-item">
+              <span className="settings-item__label">Show language flags for non-default languages</span>
+              <div
+                className={`settings-toggle${settings.showLanguageFlags ? ' settings-toggle--on' : ''}`}
+                onClick={() => updateSetting('showLanguageFlags', !settings.showLanguageFlags)}
+                role="switch"
+                aria-checked={settings.showLanguageFlags}
+              >
+                <div className="settings-toggle__thumb" />
+              </div>
+            </label>
+            <label className="settings-item">
+              <span className="settings-item__label">Default language (hides flag for this language)</span>
+              <select
+                className="settings-select"
+                value={settings.defaultLanguage}
+                onChange={(e) => updateSetting('defaultLanguage', e.target.value)}
+              >
+                <option value="EN">EN</option>
+                <option value="JP">JP</option>
+                <option value="CN">CN</option>
+                <option value="KR">KR</option>
+              </select>
+            </label>
+            <label className="settings-item">
+              <span className="settings-item__label">English country:</span>
+              <select
+                className="settings-select"
+                value={settings.englishCountry}
+                onChange={(e) => updateSetting('englishCountry', e.target.value)}
+              >
+                <option value="US">🇺🇸 US</option>
+                <option value="UK">🇬🇧 UK</option>
+                <option value="AU">🇦🇺 AU</option>
+              </select>
+            </label>
           </div>
         )}
       </div>
@@ -254,7 +293,7 @@ export default function App() {
         {portfolios.length > 0 && (
           <>
             <SummaryCards summaries={summaries} onRemove={removePortfolio} />
-            <ComparisonTable comparisons={comparisons} portfolios={portfolios} includeNmInEbay={settings.includeNmInEbay} includeLanguageInEbay={settings.includeLanguageInEbay} />
+            <ComparisonTable comparisons={comparisons} portfolios={portfolios} includeNmInEbay={settings.includeNmInEbay} includeLanguageInEbay={settings.includeLanguageInEbay} defaultLanguage={settings.defaultLanguage} showLanguageFlags={settings.showLanguageFlags} englishCountry={settings.englishCountry} />
           </>
         )}
       </main>

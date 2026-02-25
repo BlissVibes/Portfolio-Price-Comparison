@@ -6,7 +6,22 @@ interface Props {
   portfolios: PortfolioFile[];
   includeNmInEbay: boolean;
   includeLanguageInEbay: boolean;
+  defaultLanguage: string;
+  showLanguageFlags: boolean;
+  englishCountry: string;
 }
+
+const LANGUAGE_FLAGS: Record<string, string> = {
+  JP: '🇯🇵',
+  CN: '🇨🇳',
+  KR: '🇰🇷',
+};
+
+const ENGLISH_FLAGS: Record<string, string> = {
+  US: '🇺🇸',
+  UK: '🇬🇧',
+  AU: '🇦🇺',
+};
 
 type SortKey = 'productName' | 'set' | 'category' | 'priceChange' | 'priceChangePct' | 'language';
 type SortDir = 'asc' | 'desc';
@@ -41,12 +56,13 @@ function computeLatestPortfolioId(portfolios: PortfolioFile[]): string {
 }
 
 /**
- * Mobile default: hide Card Game, Card #, Rarity, and every portfolio column
- * except the most recent one. Set, Card, Grade, latest portfolio, Change, Change% remain.
+ * Mobile default: hide Card Game, Card #, Rarity, Change, Change%, and every
+ * portfolio column except the most recent one. The Change dollar amount is
+ * shown inline beneath the latest portfolio price instead.
  */
 function buildMobileHidden(portfolioIds: string[], latestId: string): Set<string> {
   const others = portfolioIds.filter((id) => id !== latestId);
-  return new Set(['category', 'cardNumber', 'rarity', 'language', ...others]);
+  return new Set(['category', 'cardNumber', 'rarity', 'language', 'change', 'changePct', ...others]);
 }
 
 /** Grades whose full descriptive name should always be shown. */
@@ -135,7 +151,7 @@ function stripFileExtension(filename: string): string {
   return filename.replace(/\.[^/.]+$/, '');
 }
 
-export default function ComparisonTable({ comparisons, portfolios, includeNmInEbay, includeLanguageInEbay }: Props) {
+export default function ComparisonTable({ comparisons, portfolios, includeNmInEbay, includeLanguageInEbay, defaultLanguage, showLanguageFlags, englishCountry }: Props) {
   const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({
     key: 'priceChange',
     dir: 'desc',
@@ -542,6 +558,12 @@ export default function ComparisonTable({ comparisons, portfolios, includeNmInEb
                   {show('set') && <td>{card.set}</td>}
                   <td className="td-name">
                     {card.productName}
+                    {showLanguageFlags && card.language && card.language !== defaultLanguage && (() => {
+                      const flag = card.language === 'EN'
+                        ? ENGLISH_FLAGS[englishCountry]
+                        : LANGUAGE_FLAGS[card.language];
+                      return flag ? <span className="lang-flag">{flag}</span> : null;
+                    })()}
                     {mobileView && card.cardNumber && (
                       <span className="td-card-num"> - {card.cardNumber}</span>
                     )}
@@ -559,6 +581,8 @@ export default function ComparisonTable({ comparisons, portfolios, includeNmInEb
                   {sortedPortfolios.map((p) => {
                     if (!show(p.id)) return null;
                     const snap = card.snapshots.find((s) => s.portfolioId === p.id);
+                    const isLatest = p.id === latestPortfolioId;
+                    const showInlineChange = mobileView && isLatest && multipleSnapshots && card.priceChange !== null;
                     return (
                       <td key={p.id} className="td-price">
                         {snap ? (
@@ -566,6 +590,11 @@ export default function ComparisonTable({ comparisons, portfolios, includeNmInEb
                             {fmt(snap.marketPrice)}
                             {snap.quantity > 1 && (
                               <span className="qty"> ×{snap.quantity}</span>
+                            )}
+                            {showInlineChange && (
+                              <span className={`td-inline-change ${Math.abs(card.priceChange!) <= 0.50 ? 'td-neutral' : card.priceChange! > 0 ? 'td-gain' : 'td-loss'}`}>
+                                {(card.priceChange! >= 0 ? '+' : '') + fmt(card.priceChange!)}
+                              </span>
                             )}
                           </>
                         ) : (

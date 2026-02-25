@@ -4,11 +4,13 @@ import type { CardComparison, PortfolioFile } from '../types';
 interface Props {
   comparisons: CardComparison[];
   portfolios: PortfolioFile[];
+  includeNmInEbay: boolean;
+  includeLanguageInEbay: boolean;
 }
 
-type SortKey = 'productName' | 'set' | 'category' | 'priceChange' | 'priceChangePct';
+type SortKey = 'productName' | 'set' | 'category' | 'priceChange' | 'priceChangePct' | 'language';
 type SortDir = 'asc' | 'desc';
-type FilterMode = 'all' | 'gained' | 'lost' | 'new' | 'removed' | 'sealed';
+type FilterMode = 'all' | 'gained' | 'lost' | 'new' | 'removed' | 'sealed' | 'slabs';
 
 const VENDOR_DEFAULT_COLOR = '#9333ea';
 const MOBILE_BREAKPOINT = 768;
@@ -44,7 +46,7 @@ function computeLatestPortfolioId(portfolios: PortfolioFile[]): string {
  */
 function buildMobileHidden(portfolioIds: string[], latestId: string): Set<string> {
   const others = portfolioIds.filter((id) => id !== latestId);
-  return new Set(['category', 'cardNumber', 'rarity', ...others]);
+  return new Set(['category', 'cardNumber', 'rarity', 'language', ...others]);
 }
 
 /** Grades whose full descriptive name should always be shown. */
@@ -55,12 +57,16 @@ const FULL_GRADE_NAMES = new Set([
   'BGS 10 Black Label',
 ]);
 
-/** Strip the word suffix from a grade string, e.g. "PSA 9.0 Mint" → "PSA 9.0". */
+/** Format a grade string: strip word suffix, drop trailing .0 from whole numbers.
+ *  e.g. "PSA 9.0 Mint" → "PSA 9", "PSA 8.5 NM" → "PSA 8.5", "PSA 10.0" → "PSA 10" */
 function formatGrade(grade: string): string {
   if (!grade || grade === 'Ungraded') return '—';
   if (FULL_GRADE_NAMES.has(grade)) return grade;
-  const match = grade.match(/^(\S+\s+[\d.]+)/);
-  return match ? match[1] : grade;
+  const match = grade.match(/^(\S+)\s+([\d.]+)/);
+  if (!match) return grade;
+  const num = parseFloat(match[2]);
+  const numStr = Number.isInteger(num) ? String(num) : match[2];
+  return `${match[1]} ${numStr}`;
 }
 
 /** Map a condition string to its standard abbreviation (NM, LP, MP, HP, DMG). */
@@ -72,18 +78,6 @@ function formatCondition(condition: string): string {
   if (c.startsWith('moderately played') || c.startsWith('moderate play')) return 'MP';
   if (c.startsWith('heavily played') || c.startsWith('heavy play')) return 'HP';
   if (c.startsWith('damaged')) return 'DMG';
-  return condition;
-}
-
-/** Normalize a condition string to its canonical full name. */
-function normalizeCondition(condition: string): string {
-  if (!condition) return '';
-  const c = condition.toLowerCase().trim();
-  if (c.startsWith('near mint')) return 'Near Mint';
-  if (c.startsWith('lightly played') || c.startsWith('light play')) return 'Lightly Played';
-  if (c.startsWith('moderately played') || c.startsWith('moderate play')) return 'Moderately Played';
-  if (c.startsWith('heavily played') || c.startsWith('heavy play')) return 'Heavily Played';
-  if (c.startsWith('damaged')) return 'Damaged';
   return condition;
 }
 
@@ -105,12 +99,23 @@ function isSealedProduct(productName: string): boolean {
 }
 
 /** Build an eBay sold-listings search URL for a card. */
-function buildEbayUrl(card: CardComparison): string {
+function buildEbayUrl(card: CardComparison, includeNmInEbay: boolean, includeLanguageInEbay: boolean): string {
   const sealed = isSealedProduct(card.productName);
   const gradeFormatted = formatGrade(card.grade);
-  const conditionFull = normalizeCondition(card.cardCondition);
-  const grade = sealed ? null : (gradeFormatted === '—' ? ['raw', conditionFull].filter(Boolean).join(' ') : gradeFormatted);
-  const query = [card.category, sealed ? null : card.set, card.productName, card.cardNumber, grade]
+  let gradePart: string | null = null;
+  if (!sealed) {
+    if (gradeFormatted !== '—') {
+      gradePart = gradeFormatted;
+    } else {
+      const abbr = formatCondition(card.cardCondition);
+      // Include condition abbreviation for raw cards, but skip NM unless opted in
+      if (abbr && !(abbr === 'NM' && !includeNmInEbay)) {
+        gradePart = abbr;
+      }
+    }
+  }
+  const languagePart = includeLanguageInEbay && card.language ? card.language : null;
+  const query = [card.category, languagePart, sealed ? null : card.set, card.productName, card.cardNumber, gradePart]
     .filter(Boolean)
     .join(' ');
   return `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(query)}&LH_Complete=1&LH_Sold=1`;
@@ -130,7 +135,7 @@ function stripFileExtension(filename: string): string {
   return filename.replace(/\.[^/.]+$/, '');
 }
 
-export default function ComparisonTable({ comparisons, portfolios }: Props) {
+export default function ComparisonTable({ comparisons, portfolios, includeNmInEbay, includeLanguageInEbay }: Props) {
   const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({
     key: 'priceChange',
     dir: 'desc',
@@ -147,7 +152,7 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
     () => window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`).matches
   );
   const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(() => {
-    if (!window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`).matches) return new Set();
+    if (!window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`).matches) return new Set(['language']);
     const latestId = computeLatestPortfolioId(portfolios);
     return buildMobileHidden(portfolios.map((p) => p.id), latestId);
   });
@@ -203,7 +208,7 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
         const latestId = computeLatestPortfolioId(portfolios);
         setHiddenColumns(buildMobileHidden(portfolios.map((p) => p.id), latestId));
       } else {
-        setHiddenColumns(new Set());
+        setHiddenColumns(new Set(['language']));
       }
     };
     mq.addEventListener('change', handler);
@@ -226,7 +231,7 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
         const latestId = computeLatestPortfolioId(portfolios);
         setHiddenColumns(buildMobileHidden(portfolios.map((p) => p.id), latestId));
       } else {
-        setHiddenColumns(new Set());
+        setHiddenColumns(new Set(['language']));
       }
       return next;
     });
@@ -279,6 +284,7 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
       if (filter === 'removed') result = result.filter((c) => c.snapshots.length === 1 && c.snapshots[0].portfolioId !== latestPortfolioId);
     }
     if (filter === 'sealed') result = result.filter((c) => isSealedProduct(c.productName));
+    if (filter === 'slabs') result = result.filter((c) => c.grade && c.grade !== 'Ungraded');
 
     return [...result].sort((a, b) => {
       let av: number | string = 0;
@@ -343,18 +349,29 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
           ))}
         </select>
         <div className="filter-tabs">
-          {(['all', ...(multipleSnapshots ? ['gained', 'lost', 'new', 'removed'] : []), 'sealed'] as FilterMode[]).map((f) => (
+          {(['all', ...(multipleSnapshots ? ['gained', 'lost', 'new', 'removed'] : [])] as FilterMode[]).map((f) => (
             <button
               key={f}
-              className={`filter-tab ${filter === f ? (f === 'sealed' ? 'filter-tab--active-sealed' : 'filter-tab--active') : ''}`}
+              className={`filter-tab ${filter === f ? 'filter-tab--active' : ''}`}
               onClick={() => {
-                setFilter(f);
+                const next: FilterMode = filter === f ? 'all' : f;
+                setFilter(next);
                 if (sort.key === 'priceChange' || sort.key === 'priceChangePct') {
-                  setSort((prev) => ({
-                    ...prev,
-                    dir: f === 'lost' ? 'asc' : 'desc',
-                  }));
+                  setSort((prev) => ({ ...prev, dir: next === 'lost' ? 'asc' : 'desc' }));
                 }
+              }}
+            >
+              {f.charAt(0).toUpperCase() + f.slice(1)}
+            </button>
+          ))}
+          <span className="filter-tabs__divider">|</span>
+          {(['slabs', 'sealed'] as FilterMode[]).map((f) => (
+            <button
+              key={f}
+              className={`filter-tab ${filter === f ? 'filter-tab--active-sealed' : ''}`}
+              onClick={() => {
+                const next: FilterMode = filter === f ? 'all' : f;
+                setFilter(next);
               }}
             >
               {f.charAt(0).toUpperCase() + f.slice(1)}
@@ -374,6 +391,7 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
               <div className="col-panel">
                 {[
                   { key: 'category', label: 'Card Game' },
+                  { key: 'language', label: 'Language' },
                   { key: 'set', label: 'Set' },
                   { key: 'cardNumber', label: 'Card #' },
                   { key: 'rarity', label: 'Rarity' },
@@ -435,6 +453,11 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
               {show('category') && (
                 <th onClick={() => toggleSort('category')} className="th-sortable">
                   Card Game <SortIcon k="category" />
+                </th>
+              )}
+              {show('language') && (
+                <th onClick={() => toggleSort('language')} className="th-sortable">
+                  Language <SortIcon k="language" />
                 </th>
               )}
               {show('set') && (
@@ -515,6 +538,7 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
                   onClick={() => handleRowClick(card.key)}
                 >
                   {show('category') && <td>{card.category}</td>}
+                  {show('language') && <td>{card.language || '—'}</td>}
                   {show('set') && <td>{card.set}</td>}
                   <td className="td-name">
                     {card.productName}
@@ -565,7 +589,7 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
                   {show('links') && (
                     <td className="td-links">
                       <a
-                        href={buildEbayUrl(card)}
+                        href={buildEbayUrl(card, includeNmInEbay, includeLanguageInEbay)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="link-btn link-btn--ebay"

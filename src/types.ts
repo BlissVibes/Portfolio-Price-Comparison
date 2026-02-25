@@ -8,6 +8,7 @@ export interface CollectrCard {
   variance: string;
   grade: string;
   cardCondition: string;
+  language: string;
   averageCostPaid: number;
   quantity: number;
   marketPrice: number;
@@ -37,6 +38,7 @@ export interface CardComparison {
   variance: string;
   grade: string;
   cardCondition: string;
+  language: string;
   snapshots: {
     portfolioId: string;
     filename: string;

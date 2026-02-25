@@ -16,10 +16,11 @@ interface AppSettings {
   includeLanguageInEbay: boolean;
   defaultLanguage: string;
   showLanguageFlags: boolean;
+  englishCountry: string;
 }
 
 const SETTINGS_KEY = 'ppc_settings';
-const DEFAULT_SETTINGS: AppSettings = { darkMode: true, includeNmInEbay: false, includeLanguageInEbay: false, defaultLanguage: 'EN', showLanguageFlags: true };
+const DEFAULT_SETTINGS: AppSettings = { darkMode: true, includeNmInEbay: false, includeLanguageInEbay: false, defaultLanguage: 'EN', showLanguageFlags: true, englishCountry: 'US' };
 
 function loadSettings(): AppSettings {
   try {
@@ -233,6 +234,18 @@ export default function App() {
                 <option value="KR">KR</option>
               </select>
             </label>
+            <label className="settings-item">
+              <span className="settings-item__label">English country:</span>
+              <select
+                className="settings-select"
+                value={settings.englishCountry}
+                onChange={(e) => updateSetting('englishCountry', e.target.value)}
+              >
+                <option value="US">🇺🇸 US</option>
+                <option value="UK">🇬🇧 UK</option>
+                <option value="AU">🇦🇺 AU</option>
+              </select>
+            </label>
           </div>
         )}
       </div>
@@ -280,7 +293,7 @@ export default function App() {
         {portfolios.length > 0 && (
           <>
             <SummaryCards summaries={summaries} onRemove={removePortfolio} />
-            <ComparisonTable comparisons={comparisons} portfolios={portfolios} includeNmInEbay={settings.includeNmInEbay} includeLanguageInEbay={settings.includeLanguageInEbay} defaultLanguage={settings.defaultLanguage} showLanguageFlags={settings.showLanguageFlags} />
+            <ComparisonTable comparisons={comparisons} portfolios={portfolios} includeNmInEbay={settings.includeNmInEbay} includeLanguageInEbay={settings.includeLanguageInEbay} defaultLanguage={settings.defaultLanguage} showLanguageFlags={settings.showLanguageFlags} englishCountry={settings.englishCountry} />
           </>
         )}
       </main>

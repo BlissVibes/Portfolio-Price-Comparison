@@ -8,12 +8,19 @@ interface Props {
   includeLanguageInEbay: boolean;
   defaultLanguage: string;
   showLanguageFlags: boolean;
+  englishCountry: string;
 }
 
 const LANGUAGE_FLAGS: Record<string, string> = {
   JP: '🇯🇵',
   CN: '🇨🇳',
   KR: '🇰🇷',
+};
+
+const ENGLISH_FLAGS: Record<string, string> = {
+  US: '🇺🇸',
+  UK: '🇬🇧',
+  AU: '🇦🇺',
 };
 
 type SortKey = 'productName' | 'set' | 'category' | 'priceChange' | 'priceChangePct' | 'language';
@@ -144,7 +151,7 @@ function stripFileExtension(filename: string): string {
   return filename.replace(/\.[^/.]+$/, '');
 }
 
-export default function ComparisonTable({ comparisons, portfolios, includeNmInEbay, includeLanguageInEbay, defaultLanguage, showLanguageFlags }: Props) {
+export default function ComparisonTable({ comparisons, portfolios, includeNmInEbay, includeLanguageInEbay, defaultLanguage, showLanguageFlags, englishCountry }: Props) {
   const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({
     key: 'priceChange',
     dir: 'desc',
@@ -551,9 +558,12 @@ export default function ComparisonTable({ comparisons, portfolios, includeNmInEb
                   {show('set') && <td>{card.set}</td>}
                   <td className="td-name">
                     {card.productName}
-                    {showLanguageFlags && card.language && card.language !== defaultLanguage && LANGUAGE_FLAGS[card.language] && (
-                      <span className="lang-flag">{LANGUAGE_FLAGS[card.language]}</span>
-                    )}
+                    {showLanguageFlags && card.language && card.language !== defaultLanguage && (() => {
+                      const flag = card.language === 'EN'
+                        ? ENGLISH_FLAGS[englishCountry]
+                        : LANGUAGE_FLAGS[card.language];
+                      return flag ? <span className="lang-flag">{flag}</span> : null;
+                    })()}
                     {mobileView && card.cardNumber && (
                       <span className="td-card-num"> - {card.cardNumber}</span>
                     )}

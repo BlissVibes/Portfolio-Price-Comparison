@@ -357,6 +357,12 @@ body { min-height: 100vh; }
   color: #fff;
 }
 
+.filter-tab--active-sealed {
+  background: var(--neutral);
+  border-color: var(--neutral);
+  color: #000;
+}
+
 /* ===== Top scrollbar (desktop only) ===== */
 .table-scroll-top {
   overflow-x: scroll;

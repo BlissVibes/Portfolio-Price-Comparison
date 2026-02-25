@@ -301,12 +301,13 @@ body { min-height: 100vh; }
 .stat--loss .stat__value { color: var(--loss); }
 
 /* ===== Portfolio Delta ===== */
-.delta-section { margin-bottom: 24px; }
+.delta-section { margin-bottom: 8px; }
 
 .delta-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 16px;
+  max-width: 1200px;
 }
 
 .delta-box {
@@ -852,7 +853,7 @@ body { min-height: 100vh; }
 @media (max-width: 600px) {
   .app-title { font-size: 1.5rem; }
   .summary-grid { grid-template-columns: 1fr; }
-  .delta-grid { grid-template-columns: 1fr 1fr; }
+  .delta-grid { grid-template-columns: repeat(2, 1fr); max-width: 100%; }
 
   /* Stack controls vertically; disable flex-wrap so items never overflow into
      a hidden second column (which was hiding the filter tabs). */

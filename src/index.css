@@ -460,6 +460,31 @@ body { min-height: 100vh; }
 
 .empty-row { text-align: center; color: var(--text-muted); padding: 40px; }
 
+.td-links { white-space: nowrap; text-align: center; }
+
+.link-btn {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: opacity 0.15s;
+  margin: 0 2px;
+}
+
+.link-btn:hover { opacity: 0.75; }
+
+.link-btn--ebay {
+  background: rgba(229, 75, 107, 0.14);
+  color: #e54b6b;
+}
+
+.link-btn--tcg {
+  background: rgba(108, 99, 255, 0.14);
+  color: #8b83ff;
+}
+
 .table-footer {
   margin-top: 10px;
   font-size: 0.8rem;

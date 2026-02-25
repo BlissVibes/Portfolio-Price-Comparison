@@ -36,6 +36,7 @@ export interface CardComparison {
   rarity: string;
   variance: string;
   grade: string;
+  cardCondition: string;
   snapshots: {
     portfolioId: string;
     filename: string;

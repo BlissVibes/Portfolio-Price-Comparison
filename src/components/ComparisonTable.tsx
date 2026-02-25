@@ -80,6 +80,24 @@ function isSealedProduct(productName: string): boolean {
   return SEALED_PATTERNS.some((re) => re.test(productName));
 }
 
+/** Build an eBay sold-listings search URL for a card. */
+function buildEbayUrl(card: CardComparison): string {
+  const gradeFormatted = formatGrade(card.grade);
+  const grade = gradeFormatted === '—' ? 'raw' : gradeFormatted;
+  const query = [card.category, card.set, card.productName, card.cardNumber, grade]
+    .filter(Boolean)
+    .join(' ');
+  return `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(query)}&LH_Complete=1&LH_Sold=1`;
+}
+
+/** Build a TCGPlayer search URL for a card (no grade). */
+function buildTcgPlayerUrl(card: CardComparison): string {
+  const query = [card.category, card.set, card.productName, card.cardNumber]
+    .filter(Boolean)
+    .join(' ');
+  return `https://www.tcgplayer.com/search/all/product?q=${encodeURIComponent(query)}`;
+}
+
 /** Strip file extension from filename (e.g., "for sale.csv" → "for sale"). */
 function stripFileExtension(filename: string): string {
   return filename.replace(/\.[^/.]+$/, '');
@@ -338,6 +356,7 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
                   ...(multipleSnapshots
                     ? [{ key: 'change', label: 'Change' }, { key: 'changePct', label: 'Change%' }]
                     : []),
+                  { key: 'links', label: 'Links' },
                 ].map(({ key, label }) => (
                   <label key={key} className="col-panel-item">
                     <input
@@ -423,6 +442,7 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
                   Change% <SortIcon k="priceChangePct" />
                 </th>
               )}
+              {show('links') && <th>Links</th>}
             </tr>
           </thead>
           <tbody>
@@ -441,11 +461,11 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
               const changeClass =
                 card.priceChange === null
                   ? ''
+                  : Math.abs(card.priceChange) <= 0.50
+                  ? 'row--neutral'
                   : card.priceChange > 0
                   ? 'row--gain'
-                  : card.priceChange < 0
-                  ? 'row--loss'
-                  : '';
+                  : 'row--loss';
 
               const rowClass = [
                 markedColor ? '' : isRemoved ? 'row--removed' : changeClass,
@@ -499,15 +519,37 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
                     );
                   })}
                   {multipleSnapshots && show('change') && (
-                    <td className={`td-price td-change ${card.priceChange === null ? '' : card.priceChange >= 0 ? 'td-gain' : 'td-loss'}`}>
+                    <td className={`td-price td-change ${card.priceChange === null ? '' : Math.abs(card.priceChange) <= 0.50 ? 'td-neutral' : card.priceChange > 0 ? 'td-gain' : 'td-loss'}`}>
                       {card.priceChange !== null
                         ? (card.priceChange >= 0 ? '+' : '') + fmt(card.priceChange)
                         : '—'}
                     </td>
                   )}
                   {multipleSnapshots && show('changePct') && (
-                    <td className={`td-price td-change ${card.priceChangePct === null ? '' : card.priceChangePct >= 0 ? 'td-gain' : 'td-loss'}`}>
+                    <td className={`td-price td-change ${card.priceChange === null ? '' : Math.abs(card.priceChange) <= 0.50 ? 'td-neutral' : card.priceChange > 0 ? 'td-gain' : 'td-loss'}`}>
                       {card.priceChangePct !== null ? pct(card.priceChangePct) : '—'}
+                    </td>
+                  )}
+                  {show('links') && (
+                    <td className="td-links">
+                      <a
+                        href={buildEbayUrl(card)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="link-btn link-btn--ebay"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        eBay
+                      </a>
+                      <a
+                        href={buildTcgPlayerUrl(card)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="link-btn link-btn--tcg"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        TCG
+                      </a>
                     </td>
                   )}
                 </tr>

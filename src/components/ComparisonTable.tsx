@@ -6,7 +6,15 @@ interface Props {
   portfolios: PortfolioFile[];
   includeNmInEbay: boolean;
   includeLanguageInEbay: boolean;
+  defaultLanguage: string;
+  showLanguageFlags: boolean;
 }
+
+const LANGUAGE_FLAGS: Record<string, string> = {
+  JP: '🇯🇵',
+  CN: '🇨🇳',
+  KR: '🇰🇷',
+};
 
 type SortKey = 'productName' | 'set' | 'category' | 'priceChange' | 'priceChangePct' | 'language';
 type SortDir = 'asc' | 'desc';
@@ -136,7 +144,7 @@ function stripFileExtension(filename: string): string {
   return filename.replace(/\.[^/.]+$/, '');
 }
 
-export default function ComparisonTable({ comparisons, portfolios, includeNmInEbay, includeLanguageInEbay }: Props) {
+export default function ComparisonTable({ comparisons, portfolios, includeNmInEbay, includeLanguageInEbay, defaultLanguage, showLanguageFlags }: Props) {
   const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({
     key: 'priceChange',
     dir: 'desc',
@@ -543,6 +551,9 @@ export default function ComparisonTable({ comparisons, portfolios, includeNmInEb
                   {show('set') && <td>{card.set}</td>}
                   <td className="td-name">
                     {card.productName}
+                    {showLanguageFlags && card.language && card.language !== defaultLanguage && LANGUAGE_FLAGS[card.language] && (
+                      <span className="lang-flag">{LANGUAGE_FLAGS[card.language]}</span>
+                    )}
                     {mobileView && card.cardNumber && (
                       <span className="td-card-num"> - {card.cardNumber}</span>
                     )}

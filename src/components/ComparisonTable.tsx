@@ -82,9 +82,9 @@ function isSealedProduct(productName: string): boolean {
 
 /** Build an eBay sold-listings search URL for a card. */
 function buildEbayUrl(card: CardComparison): string {
-  const gradeFormatted = formatGrade(card.grade);
-  const grade = gradeFormatted === '—' ? 'raw' : gradeFormatted;
   const sealed = isSealedProduct(card.productName);
+  const gradeFormatted = formatGrade(card.grade);
+  const grade = sealed ? null : (gradeFormatted === '—' ? 'raw' : gradeFormatted);
   const query = [card.category, sealed ? null : card.set, card.productName, card.cardNumber, grade]
     .filter(Boolean)
     .join(' ');

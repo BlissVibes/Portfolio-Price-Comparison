@@ -131,7 +131,8 @@ function buildEbayUrl(card: CardComparison, includeNmInEbay: boolean, includeLan
     }
   }
   // Always include language for 151 set — EN and JP share the same set name in searches
-  const force151Language = card.set === '151';
+  // Matches '151', 'SV: 151', 'Pokemon 151', 'Scarlet & Violet 151', etc.
+  const force151Language = /\b151\b/.test(card.set);
   const languagePart = (includeLanguageInEbay || force151Language) && card.language ? card.language : null;
   const query = [card.category, languagePart, sealed ? null : card.set, card.productName, card.cardNumber, gradePart]
     .filter(Boolean)

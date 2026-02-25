@@ -63,6 +63,18 @@ function formatGrade(grade: string): string {
   return match ? match[1] : grade;
 }
 
+/** Map a full condition string to its standard abbreviation (NM, LP, MP, HP, DMG). */
+function formatCondition(condition: string): string {
+  if (!condition) return '';
+  const c = condition.toLowerCase().trim();
+  if (c.startsWith('near mint')) return 'NM';
+  if (c.startsWith('lightly played') || c.startsWith('light play')) return 'LP';
+  if (c.startsWith('moderately played') || c.startsWith('moderate play')) return 'MP';
+  if (c.startsWith('heavily played') || c.startsWith('heavy play')) return 'HP';
+  if (c.startsWith('damaged')) return 'DMG';
+  return condition;
+}
+
 /** Regex patterns that identify sealed products (booster boxes, ETBs, etc.). */
 const SEALED_PATTERNS = [
   /\bbooster\s+box\b/i,
@@ -84,7 +96,8 @@ function isSealedProduct(productName: string): boolean {
 function buildEbayUrl(card: CardComparison): string {
   const sealed = isSealedProduct(card.productName);
   const gradeFormatted = formatGrade(card.grade);
-  const grade = sealed ? null : (gradeFormatted === '—' ? 'raw' : gradeFormatted);
+  const conditionAbbr = formatCondition(card.cardCondition);
+  const grade = sealed ? null : (gradeFormatted === '—' ? (conditionAbbr || 'raw') : gradeFormatted);
   const query = [card.category, sealed ? null : card.set, card.productName, card.cardNumber, grade]
     .filter(Boolean)
     .join(' ');
@@ -500,7 +513,13 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
                   </td>
                   {show('cardNumber') && <td>{card.cardNumber}</td>}
                   {show('rarity') && <td>{card.rarity}</td>}
-                  {show('grade') && <td>{formatGrade(card.grade)}</td>}
+                  {show('grade') && (
+                    <td>
+                      {formatGrade(card.grade) === '—'
+                        ? (formatCondition(card.cardCondition) || '—')
+                        : formatGrade(card.grade)}
+                    </td>
+                  )}
                   {sortedPortfolios.map((p) => {
                     if (!show(p.id)) return null;
                     const snap = card.snapshots.find((s) => s.portfolioId === p.id);

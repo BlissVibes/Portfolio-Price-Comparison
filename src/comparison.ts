@@ -23,6 +23,7 @@ export function buildComparisons(portfolios: PortfolioFile[]): CardComparison[] 
           rarity: card.rarity,
           variance: card.variance,
           grade: card.grade,
+          cardCondition: card.cardCondition,
           snapshots: [],
           priceChange: null,
           priceChangePct: null,

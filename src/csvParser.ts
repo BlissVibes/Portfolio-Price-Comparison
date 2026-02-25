@@ -30,6 +30,19 @@ function normalizeLanguage(raw: string): string {
   return LANGUAGE_ALIASES[lower] ?? trimmed.toUpperCase();
 }
 
+const KNOWN_LANG_CODES = new Set([
+  'EN', 'JP', 'CN', 'KR', 'DE', 'FR', 'IT', 'ES', 'PT', 'NL', 'PL', 'RU', 'ID', 'TH',
+]);
+
+function extractLanguageFromName(name: string): string {
+  // Match all (XX) / (XXX) tokens, prefer last one that is a known language code
+  const matches = [...name.matchAll(/\(([A-Z]{2,3})\)/g)];
+  for (const m of matches.reverse()) {
+    if (KNOWN_LANG_CODES.has(m[1])) return m[1];
+  }
+  return '';
+}
+
 function extractMarketPriceDate(headers: string[]): string {
   const marketHeader = headers.find((h) => h.toLowerCase().includes('market price'));
   if (!marketHeader) return '';
@@ -233,17 +246,20 @@ export function parseCollectrCSV(
 
   const marketPriceKey = rawHeaders.find((h) => h.toLowerCase().includes('market price')) || 'Market Price';
 
-  const cards: CollectrCard[] = result.data.map((row) => ({
+  const cards: CollectrCard[] = result.data.map((row) => {
+    const productName = row['Product Name'] || '';
+    const language = normalizeLanguage(row['Language'] || '') || extractLanguageFromName(productName);
+    return {
     portfolioName: row['Portfolio Name'] || '',
     category: row['Category'] || '',
     set: row['Set'] || '',
-    productName: row['Product Name'] || '',
+    productName,
     cardNumber: row['Card Number'] || '',
     rarity: row['Rarity'] || '',
     variance: row['Variance'] || '',
     grade: row['Grade'] || '',
     cardCondition: row['Card Condition'] || '',
-    language: normalizeLanguage(row['Language'] || ''),
+    language,
     averageCostPaid: parseFloat(row['Average Cost Paid'] || '0') || 0,
     quantity: parseInt(row['Quantity'] || '1', 10) || 1,
     marketPrice: parseFloat(row[marketPriceKey] || '0') || 0,
@@ -252,7 +268,8 @@ export function parseCollectrCSV(
     watchlist: (row['Watchlist'] || 'false').toLowerCase() === 'true',
     dateAdded: row['Date Added'] || '',
     notes: row['Notes'] || '',
-  }));
+    };
+  });
 
   const portfolioName = cards.length > 0 ? cards[0].portfolioName : '';
 

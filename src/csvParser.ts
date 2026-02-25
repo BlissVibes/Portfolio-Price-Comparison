@@ -56,7 +56,7 @@ function cardKey(card: CollectrCard): string {
     .toLowerCase();
 }
 
-export { cardKey };
+export { cardKey, extractLanguageFromName };
 
 // ───── TCGPlayer set code → full name map ─────
 

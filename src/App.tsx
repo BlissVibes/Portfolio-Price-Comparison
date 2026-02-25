@@ -4,7 +4,7 @@ import FileDropZone from './components/FileDropZone';
 import SummaryCards from './components/SummaryCards';
 import ComparisonTable from './components/ComparisonTable';
 import type { PortfolioFile } from './types';
-import { parsePortfolioFile } from './csvParser';
+import { parsePortfolioFile, extractLanguageFromName } from './csvParser';
 import { buildComparisons, buildSummaries } from './comparison';
 
 const STORAGE_KEY = 'ppc_portfolios';
@@ -40,6 +40,14 @@ function loadSaved(): PortfolioFile[] {
     if (Date.now() - savedAt > TTL_MS) {
       localStorage.removeItem(STORAGE_KEY);
       return [];
+    }
+    // Backfill language from product name for cached data parsed before the fix
+    for (const p of portfolios) {
+      for (const card of p.cards) {
+        if (!card.language) {
+          card.language = extractLanguageFromName(card.productName);
+        }
+      }
     }
     return portfolios;
   } catch {

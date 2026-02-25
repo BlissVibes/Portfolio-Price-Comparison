@@ -461,11 +461,11 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
               const changeClass =
                 card.priceChange === null
                   ? ''
+                  : Math.abs(card.priceChange) <= 0.50
+                  ? 'row--neutral'
                   : card.priceChange > 0
                   ? 'row--gain'
-                  : card.priceChange < 0
-                  ? 'row--loss'
-                  : '';
+                  : 'row--loss';
 
               const rowClass = [
                 markedColor ? '' : isRemoved ? 'row--removed' : changeClass,
@@ -519,14 +519,14 @@ export default function ComparisonTable({ comparisons, portfolios }: Props) {
                     );
                   })}
                   {multipleSnapshots && show('change') && (
-                    <td className={`td-price td-change ${card.priceChange === null ? '' : card.priceChange >= 0 ? 'td-gain' : 'td-loss'}`}>
+                    <td className={`td-price td-change ${card.priceChange === null ? '' : Math.abs(card.priceChange) <= 0.50 ? 'td-neutral' : card.priceChange > 0 ? 'td-gain' : 'td-loss'}`}>
                       {card.priceChange !== null
                         ? (card.priceChange >= 0 ? '+' : '') + fmt(card.priceChange)
                         : '—'}
                     </td>
                   )}
                   {multipleSnapshots && show('changePct') && (
-                    <td className={`td-price td-change ${card.priceChangePct === null ? '' : card.priceChangePct >= 0 ? 'td-gain' : 'td-loss'}`}>
+                    <td className={`td-price td-change ${card.priceChange === null ? '' : Math.abs(card.priceChange) <= 0.50 ? 'td-neutral' : card.priceChange > 0 ? 'td-gain' : 'td-loss'}`}>
                       {card.priceChangePct !== null ? pct(card.priceChangePct) : '—'}
                     </td>
                   )}

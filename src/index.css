@@ -14,6 +14,8 @@
   --gain-bg: rgba(46, 204, 113, 0.08);
   --loss: #e74c3c;
   --loss-bg: rgba(231, 76, 60, 0.08);
+  --neutral: #e6b800;
+  --neutral-bg: rgba(230, 184, 0, 0.08);
   --radius: 10px;
   --radius-sm: 6px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -457,6 +459,9 @@ body { min-height: 100vh; }
 .td-change { font-weight: 600; }
 .td-gain { color: var(--gain); }
 .td-loss { color: var(--loss); }
+.td-neutral { color: var(--neutral); }
+
+.row--neutral { background: var(--neutral-bg); }
 
 .empty-row { text-align: center; color: var(--text-muted); padding: 40px; }
 

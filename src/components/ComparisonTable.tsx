@@ -5,9 +5,10 @@ interface Props {
   comparisons: CardComparison[];
   portfolios: PortfolioFile[];
   includeNmInEbay: boolean;
+  includeLanguageInEbay: boolean;
 }
 
-type SortKey = 'productName' | 'set' | 'category' | 'priceChange' | 'priceChangePct';
+type SortKey = 'productName' | 'set' | 'category' | 'priceChange' | 'priceChangePct' | 'language';
 type SortDir = 'asc' | 'desc';
 type FilterMode = 'all' | 'gained' | 'lost' | 'new' | 'removed' | 'sealed';
 
@@ -45,7 +46,7 @@ function computeLatestPortfolioId(portfolios: PortfolioFile[]): string {
  */
 function buildMobileHidden(portfolioIds: string[], latestId: string): Set<string> {
   const others = portfolioIds.filter((id) => id !== latestId);
-  return new Set(['category', 'cardNumber', 'rarity', ...others]);
+  return new Set(['category', 'cardNumber', 'rarity', 'language', ...others]);
 }
 
 /** Grades whose full descriptive name should always be shown. */
@@ -56,12 +57,16 @@ const FULL_GRADE_NAMES = new Set([
   'BGS 10 Black Label',
 ]);
 
-/** Strip the word suffix from a grade string, e.g. "PSA 9.0 Mint" → "PSA 9.0". */
+/** Format a grade string: strip word suffix, drop trailing .0 from whole numbers.
+ *  e.g. "PSA 9.0 Mint" → "PSA 9", "PSA 8.5 NM" → "PSA 8.5", "PSA 10.0" → "PSA 10" */
 function formatGrade(grade: string): string {
   if (!grade || grade === 'Ungraded') return '—';
   if (FULL_GRADE_NAMES.has(grade)) return grade;
-  const match = grade.match(/^(\S+\s+[\d.]+)/);
-  return match ? match[1] : grade;
+  const match = grade.match(/^(\S+)\s+([\d.]+)/);
+  if (!match) return grade;
+  const num = parseFloat(match[2]);
+  const numStr = Number.isInteger(num) ? String(num) : match[2];
+  return `${match[1]} ${numStr}`;
 }
 
 /** Map a condition string to its standard abbreviation (NM, LP, MP, HP, DMG). */
@@ -94,7 +99,7 @@ function isSealedProduct(productName: string): boolean {
 }
 
 /** Build an eBay sold-listings search URL for a card. */
-function buildEbayUrl(card: CardComparison, includeNmInEbay: boolean): string {
+function buildEbayUrl(card: CardComparison, includeNmInEbay: boolean, includeLanguageInEbay: boolean): string {
   const sealed = isSealedProduct(card.productName);
   const gradeFormatted = formatGrade(card.grade);
   let gradePart: string | null = null;
@@ -109,7 +114,8 @@ function buildEbayUrl(card: CardComparison, includeNmInEbay: boolean): string {
       }
     }
   }
-  const query = [card.category, sealed ? null : card.set, card.productName, card.cardNumber, gradePart]
+  const languagePart = includeLanguageInEbay && card.language ? card.language : null;
+  const query = [card.category, languagePart, sealed ? null : card.set, card.productName, card.cardNumber, gradePart]
     .filter(Boolean)
     .join(' ');
   return `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(query)}&LH_Complete=1&LH_Sold=1`;
@@ -129,7 +135,7 @@ function stripFileExtension(filename: string): string {
   return filename.replace(/\.[^/.]+$/, '');
 }
 
-export default function ComparisonTable({ comparisons, portfolios, includeNmInEbay }: Props) {
+export default function ComparisonTable({ comparisons, portfolios, includeNmInEbay, includeLanguageInEbay }: Props) {
   const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({
     key: 'priceChange',
     dir: 'desc',
@@ -146,7 +152,7 @@ export default function ComparisonTable({ comparisons, portfolios, includeNmInEb
     () => window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`).matches
   );
   const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(() => {
-    if (!window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`).matches) return new Set();
+    if (!window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`).matches) return new Set(['language']);
     const latestId = computeLatestPortfolioId(portfolios);
     return buildMobileHidden(portfolios.map((p) => p.id), latestId);
   });
@@ -202,7 +208,7 @@ export default function ComparisonTable({ comparisons, portfolios, includeNmInEb
         const latestId = computeLatestPortfolioId(portfolios);
         setHiddenColumns(buildMobileHidden(portfolios.map((p) => p.id), latestId));
       } else {
-        setHiddenColumns(new Set());
+        setHiddenColumns(new Set(['language']));
       }
     };
     mq.addEventListener('change', handler);
@@ -225,7 +231,7 @@ export default function ComparisonTable({ comparisons, portfolios, includeNmInEb
         const latestId = computeLatestPortfolioId(portfolios);
         setHiddenColumns(buildMobileHidden(portfolios.map((p) => p.id), latestId));
       } else {
-        setHiddenColumns(new Set());
+        setHiddenColumns(new Set(['language']));
       }
       return next;
     });
@@ -374,6 +380,7 @@ export default function ComparisonTable({ comparisons, portfolios, includeNmInEb
               <div className="col-panel">
                 {[
                   { key: 'category', label: 'Card Game' },
+                  { key: 'language', label: 'Language' },
                   { key: 'set', label: 'Set' },
                   { key: 'cardNumber', label: 'Card #' },
                   { key: 'rarity', label: 'Rarity' },
@@ -435,6 +442,11 @@ export default function ComparisonTable({ comparisons, portfolios, includeNmInEb
               {show('category') && (
                 <th onClick={() => toggleSort('category')} className="th-sortable">
                   Card Game <SortIcon k="category" />
+                </th>
+              )}
+              {show('language') && (
+                <th onClick={() => toggleSort('language')} className="th-sortable">
+                  Language <SortIcon k="language" />
                 </th>
               )}
               {show('set') && (
@@ -515,6 +527,7 @@ export default function ComparisonTable({ comparisons, portfolios, includeNmInEb
                   onClick={() => handleRowClick(card.key)}
                 >
                   {show('category') && <td>{card.category}</td>}
+                  {show('language') && <td>{card.language || '—'}</td>}
                   {show('set') && <td>{card.set}</td>}
                   <td className="td-name">
                     {card.productName}
@@ -565,7 +578,7 @@ export default function ComparisonTable({ comparisons, portfolios, includeNmInEb
                   {show('links') && (
                     <td className="td-links">
                       <a
-                        href={buildEbayUrl(card, includeNmInEbay)}
+                        href={buildEbayUrl(card, includeNmInEbay, includeLanguageInEbay)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="link-btn link-btn--ebay"

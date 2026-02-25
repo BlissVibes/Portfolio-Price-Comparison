@@ -11,7 +11,7 @@ function extractMarketPriceDate(headers: string[]): string {
 }
 
 function cardKey(card: CollectrCard): string {
-  return [card.category, card.set, card.productName.trim(), card.cardNumber, card.grade, card.variance]
+  return [card.category, card.set, card.productName.trim(), card.cardNumber, card.grade, card.variance, card.language]
     .join('||')
     .toLowerCase();
 }
@@ -216,6 +216,7 @@ export function parseCollectrCSV(
     variance: row['Variance'] || '',
     grade: row['Grade'] || '',
     cardCondition: row['Card Condition'] || '',
+    language: row['Language'] || '',
     averageCostPaid: parseFloat(row['Average Cost Paid'] || '0') || 0,
     quantity: parseInt(row['Quantity'] || '1', 10) || 1,
     marketPrice: parseFloat(row[marketPriceKey] || '0') || 0,
@@ -266,6 +267,7 @@ export function parseTCGPlayerCSV(
       variance: '',
       grade: '',
       cardCondition: row['Condition'] || '',
+      language: '',
       averageCostPaid: 0,
       quantity: parseInt(row['Total Quantity'] || '1', 10) || 1,
       marketPrice: parseFloat(row['TCG Market Price'] || '0') || 0,
@@ -332,6 +334,7 @@ export function parseTCGPlayerText(
       variance: variant,
       grade: '',
       cardCondition: condition,
+      language: '',
       averageCostPaid: 0,
       quantity: parseInt(qtyStr, 10) || 1,
       marketPrice: parseFloat(priceStr) || 0,

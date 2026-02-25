@@ -13,10 +13,11 @@ const TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 interface AppSettings {
   darkMode: boolean;
   includeNmInEbay: boolean;
+  includeLanguageInEbay: boolean;
 }
 
 const SETTINGS_KEY = 'ppc_settings';
-const DEFAULT_SETTINGS: AppSettings = { darkMode: true, includeNmInEbay: false };
+const DEFAULT_SETTINGS: AppSettings = { darkMode: true, includeNmInEbay: false, includeLanguageInEbay: false };
 
 function loadSettings(): AppSettings {
   try {
@@ -195,6 +196,17 @@ export default function App() {
                 <div className="settings-toggle__thumb" />
               </div>
             </label>
+            <label className="settings-item">
+              <span className="settings-item__label">Include language in eBay searches</span>
+              <div
+                className={`settings-toggle${settings.includeLanguageInEbay ? ' settings-toggle--on' : ''}`}
+                onClick={() => updateSetting('includeLanguageInEbay', !settings.includeLanguageInEbay)}
+                role="switch"
+                aria-checked={settings.includeLanguageInEbay}
+              >
+                <div className="settings-toggle__thumb" />
+              </div>
+            </label>
           </div>
         )}
       </div>
@@ -242,7 +254,7 @@ export default function App() {
         {portfolios.length > 0 && (
           <>
             <SummaryCards summaries={summaries} onRemove={removePortfolio} />
-            <ComparisonTable comparisons={comparisons} portfolios={portfolios} includeNmInEbay={settings.includeNmInEbay} />
+            <ComparisonTable comparisons={comparisons} portfolios={portfolios} includeNmInEbay={settings.includeNmInEbay} includeLanguageInEbay={settings.includeLanguageInEbay} />
           </>
         )}
       </main>

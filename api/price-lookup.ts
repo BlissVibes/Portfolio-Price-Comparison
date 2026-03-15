@@ -32,7 +32,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 let lastFetchTime = 0;
 const MIN_FETCH_GAP_MS = 800;
 
-async function throttledFetch(url: string): Promise<Response> {
+async function throttledFetch(url: string, extraHeaders?: Record<string, string>): Promise<Response> {
   const now = Date.now();
   const elapsed = now - lastFetchTime;
   if (elapsed < MIN_FETCH_GAP_MS) {
@@ -45,6 +45,7 @@ async function throttledFetch(url: string): Promise<Response> {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
       'Accept-Language': 'en-US,en;q=0.9',
+      ...extraHeaders,
     },
   });
 
@@ -90,24 +91,48 @@ async function searchPriceCharting(query: string): Promise<SearchResult[]> {
 
 // ───── Fallback: PriceCharting AJAX Autocomplete ─────
 
+function slugify(s: string): string {
+  return s.toLowerCase().replace(/#/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+}
+
 async function searchPriceChartingAutocomplete(query: string): Promise<SearchResult[]> {
-  const url = `https://www.pricecharting.com/search-products?q=${encodeURIComponent(query)}&type=suggestions`;
-  const resp = await throttledFetch(url);
+  // Strip the slash portion from card numbers (e.g. "188/167" → "188") since PriceCharting's
+  // suggestions endpoint returns HTML instead of JSON when the query contains a slash.
+  const cleanQuery = query.replace(/\b(\d{1,4})\/\d{1,4}\b/g, '$1');
+  const url = `https://www.pricecharting.com/search-products?q=${encodeURIComponent(cleanQuery)}&type=suggestions`;
+  const resp = await throttledFetch(url, { 'Accept': 'application/json' });
 
   if (!resp.ok) return [];
   const text = await resp.text();
 
   try {
     const data = JSON.parse(text);
-    if (Array.isArray(data)) {
-      return data
-        .filter((item: { url?: string; title?: string }) => item.url && item.title)
-        .map((item: { url: string; title: string; 'console-name'?: string }) => ({
-          url: item.url.startsWith('http')
-            ? item.url.replace(/https?:\/\/www\.pricecharting\.com/, '')
-            : item.url,
-          title: item.title + (item['console-name'] ? ` [${item['console-name']}]` : ''),
-        }));
+
+    // Handle {products: [...]} response format from PriceCharting suggestions API
+    const items = Array.isArray(data) ? data : (Array.isArray(data?.products) ? data.products : null);
+    if (items) {
+      return items
+        .filter((item: Record<string, unknown>) => (item.productName || item.title))
+        .map((item: Record<string, unknown>) => {
+          // Support both old format ({url, title}) and current format ({productName, consoleName})
+          if (item.url && item.title) {
+            const itemUrl = item.url as string;
+            return {
+              url: itemUrl.startsWith('http')
+                ? itemUrl.replace(/https?:\/\/www\.pricecharting\.com/, '')
+                : itemUrl,
+              title: (item.title as string) + (item['console-name'] ? ` [${item['console-name']}]` : ''),
+            };
+          }
+          // Current PriceCharting suggestions format
+          const consoleName = (item.consoleName as string) || '';
+          const productName = (item.productName as string) || '';
+          const gameUrl = `/game/${slugify(consoleName)}/${slugify(productName)}`;
+          return {
+            url: gameUrl,
+            title: `${productName} [${consoleName}]`,
+          };
+        });
     }
   } catch {
     const results: SearchResult[] = [];
@@ -397,26 +422,43 @@ function buildQueryVariants(query: string): string[] {
 
 async function searchCard(query: string): Promise<SearchResult[]> {
   const variants = buildQueryVariants(query);
+  let lastRateLimitError: RateLimitError | null = null;
 
   for (const variant of variants) {
+    let results: SearchResult[] = [];
+
+    // Try primary search
     try {
-      let results = await searchPriceCharting(variant);
-
-      if (results.length === 0) {
-        results = await searchPriceChartingAutocomplete(variant);
-      }
-
-      if (results.length === 0) {
-        results = await searchViaGoogle(variant);
-      }
-
-      if (results.length > 0) {
-        return rankResults(query, results);
-      }
+      results = await searchPriceCharting(variant);
     } catch (err) {
-      if (err instanceof RateLimitError) throw err;
+      if (err instanceof RateLimitError) lastRateLimitError = err;
+    }
+
+    // Try autocomplete fallback
+    if (results.length === 0) {
+      try {
+        results = await searchPriceChartingAutocomplete(variant);
+      } catch (err) {
+        if (err instanceof RateLimitError) lastRateLimitError = err;
+      }
+    }
+
+    // Try Google fallback
+    if (results.length === 0) {
+      try {
+        results = await searchViaGoogle(variant);
+      } catch (err) {
+        if (err instanceof RateLimitError) lastRateLimitError = err;
+      }
+    }
+
+    if (results.length > 0) {
+      return rankResults(query, results);
     }
   }
+
+  // If all methods failed due to rate limiting, surface the error
+  if (lastRateLimitError) throw lastRateLimitError;
 
   return [];
 }

@@ -4,9 +4,11 @@ import FileDropZone from './components/FileDropZone';
 import SummaryCards from './components/SummaryCards';
 import PortfolioDelta from './components/PortfolioDelta';
 import ComparisonTable from './components/ComparisonTable';
-import type { PortfolioFile } from './types';
+import type { PortfolioFile, CardComparison } from './types';
 import { parsePortfolioFile, extractLanguageFromName } from './csvParser';
 import { buildComparisons, buildSummaries } from './comparison';
+import type { LookupStatus } from './priceLookup';
+import { lookupCardRateLimited } from './priceLookup';
 
 const STORAGE_KEY = 'ppc_portfolios';
 const TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -61,6 +63,13 @@ export default function App() {
   const [errors, setErrors] = useState<string[]>([]);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [ignoreDifferentNames, setIgnoreDifferentNames] = useState(false);
+  const [customCards, setCustomCards] = useState<CardComparison[]>(() => {
+    try {
+      const raw = localStorage.getItem('ppc_custom_cards');
+      return raw ? JSON.parse(raw) : [];
+    } catch { return []; }
+  });
+  const [lookupStatuses, setLookupStatuses] = useState<Map<string, LookupStatus>>(new Map());
   const [settings, setSettings] = useState<AppSettings>(() => loadSettings());
   const [showSettings, setShowSettings] = useState(false);
   const settingsRef = useRef<HTMLDivElement>(null);
@@ -94,6 +103,51 @@ export default function App() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ savedAt: Date.now(), portfolios }));
     }
   }, [portfolios]);
+
+  // Persist custom cards
+  useEffect(() => {
+    if (customCards.length === 0) {
+      localStorage.removeItem('ppc_custom_cards');
+    } else {
+      localStorage.setItem('ppc_custom_cards', JSON.stringify(customCards));
+    }
+  }, [customCards]);
+
+  const handleAddCustomCard = useCallback((card: CardComparison) => {
+    setCustomCards((prev) => [...prev, card]);
+  }, []);
+
+  const handleRemoveCustomCard = useCallback((key: string) => {
+    setCustomCards((prev) => prev.filter((c) => c.key !== key));
+  }, []);
+
+  const handleLookupCard = useCallback((card: CardComparison) => {
+    lookupCardRateLimited(card, (status) => {
+      setLookupStatuses((prev) => {
+        const next = new Map(prev);
+        next.set(status.cardKey, status);
+        return next;
+      });
+
+      // If lookup succeeded, update the card's PriceCharting data
+      if (status.status === 'done' && status.result) {
+        const { result } = status;
+        // Update custom cards if this is a custom card
+        setCustomCards((prev) =>
+          prev.map((c) =>
+            c.key === status.cardKey
+              ? {
+                  ...c,
+                  priceChartingUrl: result.url,
+                  priceChartingTitle: result.matchedTitle,
+                  priceChartingPrice: result.raw,
+                }
+              : c
+          )
+        );
+      }
+    });
+  }, []);
 
   const handleFiles = useCallback((files: File[]) => {
     const newErrors: string[] = [];
@@ -168,7 +222,8 @@ export default function App() {
     setWarnings((prev) => prev.filter((_, i) => i !== index));
   }
 
-  const comparisons = portfolios.length > 0 ? buildComparisons(portfolios) : [];
+  const baseComparisons = portfolios.length > 0 ? buildComparisons(portfolios) : [];
+  const comparisons = [...baseComparisons, ...customCards];
   const summaries = portfolios.length > 0 ? buildSummaries(portfolios) : [];
 
   return (
@@ -306,11 +361,13 @@ export default function App() {
               <PortfolioDelta
                 earliest={summaries[0]}
                 latest={summaries[summaries.length - 1]}
-                comparisons={comparisons}
+                comparisons={baseComparisons}
               />
             )}
-            <ComparisonTable comparisons={comparisons} portfolios={portfolios} includeNmInEbay={settings.includeNmInEbay} includeLanguageInEbay={settings.includeLanguageInEbay} defaultLanguage={settings.defaultLanguage} showLanguageFlags={settings.showLanguageFlags} englishCountry={settings.englishCountry} />
           </>
+        )}
+        {comparisons.length > 0 && (
+          <ComparisonTable comparisons={comparisons} portfolios={portfolios} includeNmInEbay={settings.includeNmInEbay} includeLanguageInEbay={settings.includeLanguageInEbay} defaultLanguage={settings.defaultLanguage} showLanguageFlags={settings.showLanguageFlags} englishCountry={settings.englishCountry} onAddCustomCard={handleAddCustomCard} onRemoveCustomCard={handleRemoveCustomCard} onLookupCard={handleLookupCard} lookupStatuses={lookupStatuses} />
         )}
       </main>
     </div>

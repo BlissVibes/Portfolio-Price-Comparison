@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import type { CardComparison, PortfolioFile } from '../types';
+import type { LookupStatus } from '../priceLookup';
 
 interface Props {
   comparisons: CardComparison[];
@@ -9,6 +10,10 @@ interface Props {
   defaultLanguage: string;
   showLanguageFlags: boolean;
   englishCountry: string;
+  onAddCustomCard: (card: CardComparison) => void;
+  onRemoveCustomCard: (key: string) => void;
+  onLookupCard: (card: CardComparison) => void;
+  lookupStatuses: Map<string, LookupStatus>;
 }
 
 const LANGUAGE_FLAGS: Record<string, string> = {
@@ -154,7 +159,7 @@ function stripFileExtension(filename: string): string {
   return filename.replace(/\.[^/.]+$/, '');
 }
 
-export default function ComparisonTable({ comparisons, portfolios, includeNmInEbay, includeLanguageInEbay, defaultLanguage, showLanguageFlags, englishCountry }: Props) {
+export default function ComparisonTable({ comparisons, portfolios, includeNmInEbay, includeLanguageInEbay, defaultLanguage, showLanguageFlags, englishCountry, onAddCustomCard, onRemoveCustomCard, onLookupCard, lookupStatuses }: Props) {
   const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({
     key: 'priceChange',
     dir: 'desc',
@@ -176,6 +181,57 @@ export default function ComparisonTable({ comparisons, portfolios, includeNmInEb
     return buildMobileHidden(portfolios.map((p) => p.id), latestId);
   });
   const [showColPanel, setShowColPanel] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newCard, setNewCard] = useState({
+    category: 'Pokemon',
+    set: '',
+    productName: '',
+    cardNumber: '',
+    rarity: '',
+    variance: '',
+    grade: '',
+    cardCondition: 'Near Mint',
+    language: 'EN',
+    quantity: 1,
+    marketPrice: 0,
+  });
+
+  function handleAddCard(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newCard.productName.trim()) return;
+    const key = `custom_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const card: CardComparison = {
+      key,
+      productName: newCard.productName.trim(),
+      set: newCard.set.trim(),
+      category: newCard.category.trim(),
+      cardNumber: newCard.cardNumber.trim(),
+      rarity: newCard.rarity.trim(),
+      variance: newCard.variance.trim(),
+      grade: newCard.grade.trim() || 'Ungraded',
+      cardCondition: newCard.cardCondition.trim(),
+      language: newCard.language,
+      snapshots: [],
+      priceChange: null,
+      priceChangePct: null,
+      isCustom: true,
+    };
+    onAddCustomCard(card);
+    setNewCard({
+      category: newCard.category,
+      set: '',
+      productName: '',
+      cardNumber: '',
+      rarity: '',
+      variance: '',
+      grade: '',
+      cardCondition: 'Near Mint',
+      language: newCard.language,
+      quantity: 1,
+      marketPrice: 0,
+    });
+    setShowAddForm(false);
+  }
 
   const topScrollRef = useRef<HTMLDivElement>(null);
   const topScrollInnerRef = useRef<HTMLDivElement>(null);
@@ -348,7 +404,83 @@ export default function ComparisonTable({ comparisons, portfolios, includeNmInEb
 
   return (
     <section className="table-section">
-      <h2 className="section-title">Card Price Comparison</h2>
+      <div className="section-header">
+        <h2 className="section-title">Card Price Comparison</h2>
+        <button
+          className={`add-card-btn ${showAddForm ? 'add-card-btn--active' : ''}`}
+          onClick={() => setShowAddForm((v) => !v)}
+        >
+          {showAddForm ? '× Cancel' : '+ Add Custom Card'}
+        </button>
+      </div>
+
+      {showAddForm && (
+        <form className="add-card-form" onSubmit={handleAddCard}>
+          <div className="add-card-form__row">
+            <label className="add-card-form__field">
+              <span>Card Game</span>
+              <select value={newCard.category} onChange={(e) => setNewCard((c) => ({ ...c, category: e.target.value }))}>
+                <option value="Pokemon">Pokemon</option>
+                <option value="Magic: The Gathering">Magic: The Gathering</option>
+                <option value="Yu-Gi-Oh!">Yu-Gi-Oh!</option>
+                <option value="Other">Other</option>
+              </select>
+            </label>
+            <label className="add-card-form__field">
+              <span>Language</span>
+              <select value={newCard.language} onChange={(e) => setNewCard((c) => ({ ...c, language: e.target.value }))}>
+                <option value="EN">EN</option>
+                <option value="JP">JP</option>
+                <option value="CN">CN</option>
+                <option value="KR">KR</option>
+              </select>
+            </label>
+          </div>
+          <div className="add-card-form__row">
+            <label className="add-card-form__field add-card-form__field--wide">
+              <span>Product Name *</span>
+              <input type="text" required value={newCard.productName} onChange={(e) => setNewCard((c) => ({ ...c, productName: e.target.value }))} placeholder="e.g. Charizard ex" />
+            </label>
+            <label className="add-card-form__field">
+              <span>Card #</span>
+              <input type="text" value={newCard.cardNumber} onChange={(e) => setNewCard((c) => ({ ...c, cardNumber: e.target.value }))} placeholder="e.g. 006/165" />
+            </label>
+          </div>
+          <div className="add-card-form__row">
+            <label className="add-card-form__field">
+              <span>Set</span>
+              <input type="text" value={newCard.set} onChange={(e) => setNewCard((c) => ({ ...c, set: e.target.value }))} placeholder="e.g. Scarlet & Violet" />
+            </label>
+            <label className="add-card-form__field">
+              <span>Rarity</span>
+              <input type="text" value={newCard.rarity} onChange={(e) => setNewCard((c) => ({ ...c, rarity: e.target.value }))} placeholder="e.g. Rare Holo" />
+            </label>
+          </div>
+          <div className="add-card-form__row">
+            <label className="add-card-form__field">
+              <span>Grade</span>
+              <input type="text" value={newCard.grade} onChange={(e) => setNewCard((c) => ({ ...c, grade: e.target.value }))} placeholder="e.g. PSA 10 (or leave blank)" />
+            </label>
+            <label className="add-card-form__field">
+              <span>Condition</span>
+              <select value={newCard.cardCondition} onChange={(e) => setNewCard((c) => ({ ...c, cardCondition: e.target.value }))}>
+                <option value="Near Mint">Near Mint</option>
+                <option value="Lightly Played">Lightly Played</option>
+                <option value="Moderately Played">Moderately Played</option>
+                <option value="Heavily Played">Heavily Played</option>
+                <option value="Damaged">Damaged</option>
+              </select>
+            </label>
+            <label className="add-card-form__field">
+              <span>Variance</span>
+              <input type="text" value={newCard.variance} onChange={(e) => setNewCard((c) => ({ ...c, variance: e.target.value }))} placeholder="e.g. Holo" />
+            </label>
+          </div>
+          <div className="add-card-form__actions">
+            <button type="submit" className="add-card-form__submit">Add Card</button>
+          </div>
+        </form>
+      )}
 
       <div className="table-controls">
         <input
@@ -571,6 +703,7 @@ export default function ComparisonTable({ comparisons, portfolios, includeNmInEb
                       <span className="td-card-num"> - {card.cardNumber}</span>
                     )}
                     {sealed && <span className="badge badge--sealed">Sealed</span>}
+                    {card.isCustom && <span className="badge badge--custom">Custom</span>}
                   </td>
                   {show('cardNumber') && <td>{card.cardNumber}</td>}
                   {show('rarity') && <td>{card.rarity}</td>}
@@ -618,28 +751,69 @@ export default function ComparisonTable({ comparisons, portfolios, includeNmInEb
                       {card.priceChangePct !== null ? pct(card.priceChangePct) : '—'}
                     </td>
                   )}
-                  {show('links') && (
-                    <td className="td-links">
-                      <a
-                        href={buildEbayUrl(card, includeNmInEbay, includeLanguageInEbay)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="link-btn link-btn--ebay"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        eBay
-                      </a>
-                      <a
-                        href={buildTcgPlayerUrl(card)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="link-btn link-btn--tcg"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        TCG
-                      </a>
-                    </td>
-                  )}
+                  {show('links') && (() => {
+                    const ls = lookupStatuses.get(card.key);
+                    const pcUrl = card.priceChartingUrl || ls?.result?.url;
+                    const pcTitle = card.priceChartingTitle || ls?.result?.matchedTitle;
+                    const pcPrice = card.priceChartingPrice ?? ls?.result?.raw;
+                    return (
+                      <td className="td-links">
+                        <button
+                          className="link-btn link-btn--lookup"
+                          onClick={(e) => { e.stopPropagation(); onLookupCard(card); }}
+                          disabled={ls?.status === 'loading'}
+                          title={pcTitle ? `Matched: ${pcTitle}` : 'Lookup on PriceCharting'}
+                        >
+                          {ls?.status === 'loading' ? <span className="lookup-spinner" /> : '🔍'}
+                        </button>
+                        {pcUrl && (
+                          <a
+                            href={pcUrl.startsWith('http') ? pcUrl : `https://www.pricecharting.com${pcUrl}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="link-btn link-btn--pc"
+                            onClick={(e) => e.stopPropagation()}
+                            title={pcTitle ? `${pcTitle}${pcPrice ? ` — $${pcPrice.toFixed(2)}` : ''}` : 'PriceCharting'}
+                          >
+                            PC
+                          </a>
+                        )}
+                        {ls?.status === 'error' && (
+                          <span className="lookup-error" title={ls.error}>!</span>
+                        )}
+                        {ls?.status === 'not-found' && (
+                          <span className="lookup-not-found" title="No prices found">—</span>
+                        )}
+                        <a
+                          href={buildEbayUrl(card, includeNmInEbay, includeLanguageInEbay)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="link-btn link-btn--ebay"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          eBay
+                        </a>
+                        <a
+                          href={buildTcgPlayerUrl(card)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="link-btn link-btn--tcg"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          TCG
+                        </a>
+                        {card.isCustom && (
+                          <button
+                            className="link-btn link-btn--remove"
+                            onClick={(e) => { e.stopPropagation(); onRemoveCustomCard(card.key); }}
+                            title="Remove custom card"
+                          >
+                            ×
+                          </button>
+                        )}
+                      </td>
+                    );
+                  })()}
                 </tr>
               );
             })}

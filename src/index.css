@@ -849,6 +849,190 @@ body { min-height: 100vh; }
   cursor: pointer;
 }
 
+/* ===== Section Header ===== */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.section-header .section-title {
+  margin-bottom: 0;
+}
+
+.add-card-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 14px;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.add-card-btn:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.add-card-btn--active {
+  border-color: var(--loss);
+  color: var(--loss);
+}
+
+/* ===== Add Card Form ===== */
+.add-card-form {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.add-card-form__row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.add-card-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 120px;
+}
+
+.add-card-form__field--wide {
+  flex: 2;
+  min-width: 200px;
+}
+
+.add-card-form__field span {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.add-card-form__field input,
+.add-card-form__field select {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  color: var(--text);
+  font-size: 0.85rem;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.add-card-form__field input:focus,
+.add-card-form__field select:focus {
+  border-color: var(--accent);
+}
+
+.add-card-form__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.add-card-form__submit {
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  color: #fff;
+  padding: 7px 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.add-card-form__submit:hover {
+  background: var(--accent-hover);
+}
+
+/* ===== Lookup Button & PC Link ===== */
+.link-btn--lookup {
+  background: rgba(108, 99, 255, 0.10);
+  color: var(--accent);
+  border: none;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.82rem;
+  transition: opacity 0.15s;
+  vertical-align: middle;
+}
+
+.link-btn--lookup:hover { opacity: 0.75; }
+.link-btn--lookup:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.link-btn--pc {
+  background: rgba(46, 204, 113, 0.14);
+  color: #2ecc71;
+}
+
+.link-btn--remove {
+  background: rgba(231, 76, 60, 0.14);
+  color: var(--loss);
+  border: none;
+  cursor: pointer;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  transition: opacity 0.15s;
+}
+
+.link-btn--remove:hover { opacity: 0.7; }
+
+.lookup-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.lookup-error {
+  display: inline-block;
+  color: var(--loss);
+  font-weight: 700;
+  font-size: 0.85rem;
+  margin: 0 2px;
+  cursor: help;
+}
+
+.lookup-not-found {
+  display: inline-block;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin: 0 2px;
+  cursor: help;
+}
+
+/* ===== Custom Card Badge ===== */
+.badge--custom {
+  background: rgba(108, 99, 255, 0.18);
+  color: #a78bfa;
+}
+
 /* ===== Responsive ===== */
 @media (max-width: 600px) {
   .app-title { font-size: 1.5rem; }

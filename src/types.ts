@@ -49,6 +49,10 @@ export interface CardComparison {
   }[];
   priceChange: number | null; // latest vs earliest
   priceChangePct: number | null;
+  isCustom?: boolean; // true if manually added by user
+  priceChartingUrl?: string; // matched PriceCharting URL
+  priceChartingTitle?: string; // matched PriceCharting title
+  priceChartingPrice?: number; // raw price from PriceCharting
 }
 
 export interface PortfolioSummary {

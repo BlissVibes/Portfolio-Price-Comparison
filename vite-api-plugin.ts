@@ -2,9 +2,30 @@
  * Vite plugin that handles /api/price-lookup requests during development.
  * In production on Vercel, the serverless function in api/price-lookup.ts handles this.
  * This plugin replicates the same logic so `npm run dev` works without `vercel dev`.
+ *
+ * Uses node-fetch + https-proxy-agent so it works behind proxies (e.g. dev sandboxes).
+ * On Vercel, the api/price-lookup.ts serverless function uses native fetch (works fine).
  */
 
 import type { Plugin } from 'vite';
+import nodeFetch from 'node-fetch';
+import { HttpsProxyAgent } from 'https-proxy-agent';
+
+// ───── Proxy Agent ─────
+// Respect proxy env vars (npm_config_proxy, GLOBAL_AGENT_HTTP_PROXY, HTTPS_PROXY, etc.)
+
+function getProxyAgent(): HttpsProxyAgent<string> | undefined {
+  const proxyUrl =
+    process.env.npm_config_proxy ||
+    process.env.GLOBAL_AGENT_HTTP_PROXY ||
+    process.env.HTTPS_PROXY ||
+    process.env.https_proxy ||
+    process.env.HTTP_PROXY ||
+    process.env.http_proxy;
+  return proxyUrl ? new HttpsProxyAgent(proxyUrl) : undefined;
+}
+
+const proxyAgent = getProxyAgent();
 
 // ───── Types ─────
 
@@ -25,7 +46,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 let lastFetchTime = 0;
 const MIN_FETCH_GAP_MS = 800;
 
-async function throttledFetch(url: string): Promise<Response> {
+async function throttledFetch(url: string): Promise<import('node-fetch').Response> {
   const now = Date.now();
   const elapsed = now - lastFetchTime;
   if (elapsed < MIN_FETCH_GAP_MS) {
@@ -33,7 +54,9 @@ async function throttledFetch(url: string): Promise<Response> {
   }
   lastFetchTime = Date.now();
 
-  const resp = await fetch(url, {
+  const resp = await nodeFetch(url, {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    agent: proxyAgent as any,
     headers: {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',

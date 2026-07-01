@@ -14,7 +14,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Added
 - Firebase integration (`firebase@^12.15.0`) for auth/entitlements, wiring up ad-free tiers via `AdSlots` (Adsterra native banner + 300x250 rectangle) rendered at the bottom of the page
-- Canonical URL `<link>` pointing at `https://shinycardboard.com/portfolio/`
+- Canonical URL `<link>` pointing at `https://shinycardboard.win/portfolio/`
 
 ### Changed
 - Production builds now serve under the `/portfolio/` base path (dev stays at `/`, GitHub Pages keeps `/Portfolio-Price-Comparison/`)

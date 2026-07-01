@@ -5,6 +5,7 @@ import SummaryCards from './components/SummaryCards';
 import PortfolioDelta from './components/PortfolioDelta';
 import ComparisonTable from './components/ComparisonTable';
 import AdSlots from './components/AdSlots';
+import SiteHeader from './components/SiteHeader';
 import type { PortfolioFile, CardComparison } from './types';
 import { parsePortfolioFile, extractLanguageFromName } from './csvParser';
 import { buildComparisons, buildSummaries } from './comparison';
@@ -228,7 +229,9 @@ export default function App() {
   const summaries = portfolios.length > 0 ? buildSummaries(portfolios) : [];
 
   return (
-    <div className="app">
+    <>
+      <SiteHeader />
+      <div className="app">
       {/* Settings cog — fixed top-right corner */}
       <div className="settings-wrap" ref={settingsRef}>
         <button
@@ -372,6 +375,7 @@ export default function App() {
         )}
         <AdSlots />
       </main>
-    </div>
+      </div>
+    </>
   );
 }

@@ -7,7 +7,7 @@ ShinyCardboard site.**
 ## How it fits the ShinyCardboard ecosystem
 
 - Deploys as its **own Vercel project**, and is **proxied** by the website at
-  **`shinycardboard.com/portfolio`** (a `vercel.json` rewrite in the website repo
+  **`shinycardboard.win/portfolio`** (a `vercel.json` rewrite in the website repo
   points there). Pushing here goes live on the site with **no website push**.
 - Because it's served same-origin under the main domain, it **shares the site's
   Google login** and serves the **same Adsterra ads** on the approved domain.

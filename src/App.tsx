@@ -4,6 +4,7 @@ import FileDropZone from './components/FileDropZone';
 import SummaryCards from './components/SummaryCards';
 import PortfolioDelta from './components/PortfolioDelta';
 import ComparisonTable from './components/ComparisonTable';
+import AdSlots from './components/AdSlots';
 import type { PortfolioFile, CardComparison } from './types';
 import { parsePortfolioFile, extractLanguageFromName } from './csvParser';
 import { buildComparisons, buildSummaries } from './comparison';
@@ -369,6 +370,7 @@ export default function App() {
         {comparisons.length > 0 && (
           <ComparisonTable comparisons={comparisons} portfolios={portfolios} includeNmInEbay={settings.includeNmInEbay} includeLanguageInEbay={settings.includeLanguageInEbay} defaultLanguage={settings.defaultLanguage} showLanguageFlags={settings.showLanguageFlags} englishCountry={settings.englishCountry} onAddCustomCard={handleAddCustomCard} onRemoveCustomCard={handleRemoveCustomCard} onLookupCard={handleLookupCard} lookupStatuses={lookupStatuses} />
         )}
+        <AdSlots />
       </main>
     </div>
   );

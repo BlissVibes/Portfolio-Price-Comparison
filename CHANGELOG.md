@@ -10,6 +10,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
 
+## [1.4.9.0] - 2026-07-01
+
+### Added
+- Firebase integration (`firebase@^12.15.0`) for auth/entitlements, wiring up ad-free tiers via `AdSlots` (Adsterra native banner + 300x250 rectangle) rendered at the bottom of the page
+- Canonical URL `<link>` pointing at `https://shinycardboard.com/portfolio/`
+
+### Changed
+- Production builds now serve under the `/portfolio/` base path (dev stays at `/`, GitHub Pages keeps `/Portfolio-Price-Comparison/`)
+- PWA service worker registers with scope `/portfolio/` (manifest `scope`/`start_url` and workbox `navigateFallback` updated) so it works when served behind the site proxy
+- Price-lookup API URL builder is now base-path aware, using `import.meta.env.BASE_URL` when no explicit API base is configured
+
+---
+
 ## [1.2.4] - 2026-02-24
 
 ### Changed

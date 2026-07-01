@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { version } from '../package.json';
 import FileDropZone from './components/FileDropZone';
 import SummaryCards from './components/SummaryCards';
@@ -224,9 +224,17 @@ export default function App() {
     setWarnings((prev) => prev.filter((_, i) => i !== index));
   }
 
-  const baseComparisons = portfolios.length > 0 ? buildComparisons(portfolios) : [];
-  const comparisons = [...baseComparisons, ...customCards];
-  const summaries = portfolios.length > 0 ? buildSummaries(portfolios) : [];
+  // Memoize so we don't rebuild every card comparison/summary (Map builds +
+  // full iteration) on every render — only when the inputs actually change.
+  const baseComparisons = useMemo(
+    () => (portfolios.length > 0 ? buildComparisons(portfolios) : []),
+    [portfolios],
+  );
+  const comparisons = useMemo(() => [...baseComparisons, ...customCards], [baseComparisons, customCards]);
+  const summaries = useMemo(
+    () => (portfolios.length > 0 ? buildSummaries(portfolios) : []),
+    [portfolios],
+  );
 
   return (
     <>

@@ -152,7 +152,10 @@ export async function lookupCard(card: CardComparison): Promise<PriceLookupResul
   if (!query) throw new Error('No card name to search for');
 
   const apiBase = getApiBase();
-  const url = `${apiBase}/api/price-lookup?q=${encodeURIComponent(query)}`;
+  const base = import.meta.env.BASE_URL;
+  const url = apiBase
+    ? `${apiBase}/api/price-lookup?q=${encodeURIComponent(query)}`
+    : `${base}api/price-lookup?q=${encodeURIComponent(query)}`;
 
   const resp = await fetch(url);
   if (!resp.ok) {

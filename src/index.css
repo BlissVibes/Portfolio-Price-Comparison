@@ -733,9 +733,13 @@ body { min-height: 100vh; }
 /* ===== Settings cog ===== */
 .settings-wrap {
   position: fixed;
-  top: 16px;
+  /* Sit BELOW the 64px shared site header so the cog never overlaps the header's
+     hamburger (mobile) or account button (desktop) and block navigation. */
+  top: 76px;
   right: 16px;
-  z-index: 300;
+  /* Below the header (z-index 100) so an open mobile nav menu covers the cog
+     instead of the cog punching through it. */
+  z-index: 90;
 }
 
 .settings-cog {

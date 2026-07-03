@@ -1,9 +1,11 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { version } from '../package.json';
 import FileDropZone from './components/FileDropZone';
 import SummaryCards from './components/SummaryCards';
 import PortfolioDelta from './components/PortfolioDelta';
 import ComparisonTable from './components/ComparisonTable';
+import AdSlots from './components/AdSlots';
+import SiteHeader from './components/SiteHeader';
 import type { PortfolioFile, CardComparison } from './types';
 import { parsePortfolioFile, extractLanguageFromName } from './csvParser';
 import { buildComparisons, buildSummaries } from './comparison';
@@ -222,12 +224,22 @@ export default function App() {
     setWarnings((prev) => prev.filter((_, i) => i !== index));
   }
 
-  const baseComparisons = portfolios.length > 0 ? buildComparisons(portfolios) : [];
-  const comparisons = [...baseComparisons, ...customCards];
-  const summaries = portfolios.length > 0 ? buildSummaries(portfolios) : [];
+  // Memoize so we don't rebuild every card comparison/summary (Map builds +
+  // full iteration) on every render — only when the inputs actually change.
+  const baseComparisons = useMemo(
+    () => (portfolios.length > 0 ? buildComparisons(portfolios) : []),
+    [portfolios],
+  );
+  const comparisons = useMemo(() => [...baseComparisons, ...customCards], [baseComparisons, customCards]);
+  const summaries = useMemo(
+    () => (portfolios.length > 0 ? buildSummaries(portfolios) : []),
+    [portfolios],
+  );
 
   return (
-    <div className="app">
+    <>
+      <SiteHeader />
+      <div className="app">
       {/* Settings cog — fixed top-right corner */}
       <div className="settings-wrap" ref={settingsRef}>
         <button
@@ -369,7 +381,9 @@ export default function App() {
         {comparisons.length > 0 && (
           <ComparisonTable comparisons={comparisons} portfolios={portfolios} includeNmInEbay={settings.includeNmInEbay} includeLanguageInEbay={settings.includeLanguageInEbay} defaultLanguage={settings.defaultLanguage} showLanguageFlags={settings.showLanguageFlags} englishCountry={settings.englishCountry} onAddCustomCard={handleAddCustomCard} onRemoveCustomCard={handleRemoveCustomCard} onLookupCard={handleLookupCard} lookupStatuses={lookupStatuses} />
         )}
+        <AdSlots />
       </main>
-    </div>
+      </div>
+    </>
   );
 }
